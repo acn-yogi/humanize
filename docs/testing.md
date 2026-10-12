@@ -25,13 +25,18 @@ python -m pytest tests/test_filesize.py
 Run only the tests whose names match an expression with `-k`:
 
 ```shell
-python -m pytest tests/test_filesize.py -k naturalsize
+python -m pytest tests/test_number.py -k intword
 ```
 
 ## Skipped tests
 
-The translation tests need compiled `.mo` files. If they are missing, those tests are
-skipped. Build them with `msgfmt` from [gettext](https://www.gnu.org/software/gettext/):
+Some translation tests in `tests/test_i18n.py` are skipped when the compiled `.mo` files
+are missing. The test that checks translation updates is also skipped unless `bash`,
+`xgettext`, `msgmerge` and `msgfmt` (from [gettext](https://www.gnu.org/software/gettext/))
+are on your `PATH`.
+
+To build the `.mo` files, run this from the repository root. It needs `msgfmt` on your
+`PATH`:
 
 ```shell
 scripts/generate-translation-binaries.sh
