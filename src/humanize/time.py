@@ -546,11 +546,38 @@ def precisedelta(
     >>> precisedelta(delta, minimum_unit="minutes")
     '0 minutes'
 
+    A negative value keeps its sign, like `str(timedelta)` does:
+
+    ```pycon
+    >>> precisedelta(dt.timedelta(seconds=-3661))
+    '-1 hour, 1 minute and 1 second'
+
     ```
+    """
+    import datetime as dt
+
+    negative = False
+    if isinstance(value, dt.timedelta):
+        negative = value < dt.timedelta(0)
+    elif isinstance(value, (int, float)) and not isinstance(value, bool):
+        negative = value < 0
+    if negative:
+        value = -value
+
+    text, nonzero = _precisedelta(value, minimum_unit, suppress, format)
+    return "-" + text if negative and nonzero else text
+
+
+def _precisedelta(
+    value: Any, minimum_unit: str, suppress: Iterable[str], format: str
+) -> tuple[str, bool]:
+    """Render `value` as `precisedelta` does, ignoring its sign.
+
+    Also return whether any unit of the result is non-zero.
     """
     date, delta = _date_and_delta(value, precise=True)
     if date is None:
-        return str(value)
+        return str(value), False
 
     suppress_set = {Unit[s.upper()] for s in suppress}
 
@@ -674,13 +701,16 @@ def precisedelta(
         if unit == min_unit:
             break
 
+    # A result that renders as zero (e.g. "0 minutes") has no sign to keep.
+    nonzero = any(c in "123456789" for text in texts for c in text)
+
     if len(texts) == 1:
-        return texts[0]
+        return texts[0], nonzero
 
     head = ", ".join(texts[:-1])
     tail = texts[-1]
 
-    return _("%s and %s") % (head, tail)
+    return _("%s and %s") % (head, tail), nonzero
 
 
 def _rounding_by_fmt(format: str, value: float) -> float | int:

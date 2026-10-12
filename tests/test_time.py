@@ -838,6 +838,46 @@ def test_precisedelta_suppress_units(
     )
 
 
+@pytest.mark.parametrize(
+    "val, min_unit, suppress, fmt",
+    [
+        (3661, "seconds", [], "%0.2f"),
+        (dt.timedelta(seconds=3661), "seconds", [], "%0.2f"),
+        (dt.timedelta(days=2, seconds=3633, microseconds=123000), "seconds", [], "%0.2f"),
+        (dt.timedelta(days=2, seconds=3633, microseconds=123000), "seconds", ["days"], "%0.4f"),
+        (dt.timedelta(days=2, seconds=3633, microseconds=123000), "microseconds", [], "%0.2f"),
+        (90.5, "minutes", [], "%0.2f"),
+        (400, "years", [], "%0.2f"),
+        (0.5, "milliseconds", [], "%0.2f"),
+    ],
+)
+def test_precisedelta_negative(
+    val: dt.timedelta | float, min_unit: str, suppress: list[str], fmt: str
+) -> None:
+    positive = humanize.precisedelta(
+        val, minimum_unit=min_unit, suppress=suppress, format=fmt
+    )
+    assert not positive.startswith("-")
+    assert (
+        humanize.precisedelta(-val, minimum_unit=min_unit, suppress=suppress, format=fmt)
+        == "-" + positive
+    )
+
+
+@pytest.mark.parametrize(
+    "val, min_unit",
+    [
+        (0, "seconds"),
+        (-0.0, "seconds"),
+        (dt.timedelta(0), "seconds"),
+        (-0.1, "minutes"),
+        (dt.timedelta(microseconds=-1), "seconds"),
+    ],
+)
+def test_precisedelta_zero_has_no_sign(val: dt.timedelta | float, min_unit: str) -> None:
+    assert not humanize.precisedelta(val, minimum_unit=min_unit).startswith("-")
+
+
 def test_precisedelta_bogus_call() -> None:
     assert humanize.precisedelta(None) == "None"
 
