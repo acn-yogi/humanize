@@ -22,6 +22,7 @@ nav:
   - Filesize: filesize.md
   - Lists: lists.md
   - Internationalisation: i18n.md
+  - Testing: testing.md
 
 plugins:
   - search
