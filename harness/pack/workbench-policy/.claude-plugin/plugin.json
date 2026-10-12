@@ -1,0 +1,6 @@
+{
+  "name": "workbench-policy",
+  "version": "0.1.0",
+  "description": "Workbench policy mod: file tools stay inside /work, and tools on the workbench deny list are refused with a reason. Best effort; managed settings and the sandbox carry the controls that must hold.",
+  "author": { "name": "Workbench sandbox" }
+}

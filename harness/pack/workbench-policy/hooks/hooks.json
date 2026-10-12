@@ -1,0 +1,4 @@
+{
+  "description": "Workbench policy: tool.call denies for paths outside /work and for listed tools",
+  "modules": ["./register.ts"]
+}

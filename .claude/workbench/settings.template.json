@@ -1,0 +1,60 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "disableBypassPermissionsMode": "disable",
+    "allow": [
+      "Read(/{{WORK}}/**)",
+      "Edit(/{{WORK}}/**)",
+      "Glob",
+      "Grep",
+      "Bash"
+    ],
+    "deny": [
+      "WebFetch",
+      "WebSearch",
+      "mcp__*",
+      "Edit(/{{WORK}}/.git/**)",
+      "Edit(/{{WORK}}/.git)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "autoAllowBashIfSandboxed": true,
+    "allowUnsandboxedCommands": false,
+    "excludedCommands": [],
+    "filesystem": {
+      "denyRead": []
+    },
+    "network": {
+      "allowedDomains": []
+    },
+    "credentials": {
+      "envVars": [
+        { "name": "ANTHROPIC_API_KEY", "mode": "deny" },
+        { "name": "ANTHROPIC_AUTH_TOKEN", "mode": "deny" },
+        { "name": "CLAUDE_CODE_OAUTH_TOKEN", "mode": "deny" },
+        { "name": "GH_TOKEN", "mode": "deny" },
+        { "name": "GITHUB_TOKEN", "mode": "deny" }
+      ]
+    }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [{ "type": "command", "command": "{{HOOKS}}/scope-guard.sh {{TASK}}", "timeout": 30 }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{ "type": "command", "command": "{{HOOKS}}/stop-checks.sh {{TASK}}", "timeout": 600 }]
+      }
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "DISABLE_UPDATES": "1",
+    "DISABLE_AUTOUPDATER": "1"
+  }
+}

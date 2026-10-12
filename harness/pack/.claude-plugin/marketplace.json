@@ -1,0 +1,17 @@
+{
+  "name": "workbench-pack",
+  "owner": { "name": "Workbench sandbox" },
+  "description": "The managed mods pack baked into every workbench image: policy and evidence, loaded in place from /opt/workbench/pack",
+  "plugins": [
+    {
+      "name": "workbench-evidence",
+      "source": "./workbench-evidence",
+      "description": "Records every conversation row and tool call result as JSONL for the workbench's packet"
+    },
+    {
+      "name": "workbench-policy",
+      "source": "./workbench-policy",
+      "description": "Keeps file tools inside /work and refuses tools on the workbench deny list"
+    }
+  ]
+}

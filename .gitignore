@@ -35,3 +35,6 @@ dmypy.json
 
 # hatch-vcs
 src/*/_version.py
+
+# Workbench demo: local run output (recordings live in demo/recordings)
+runs/

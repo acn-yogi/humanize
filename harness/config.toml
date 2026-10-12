@@ -1,0 +1,42 @@
+# Workbench demo harness. The runner reads this file from the BASE commit, never from a
+# task's result, so a task cannot loosen its own harness.
+
+[github]
+# PRs open on this fork and nowhere else. publish.sh refuses any other repository.
+repo = "acn-yogi/humanize"
+# Read only. Never pushed to, never commented on.
+upstream = "python-humanize/humanize"
+base = "main"
+
+[models]
+# The author and the adversarial reviewer are different models on purpose.
+worker = "sonnet"
+reviewer = "opus"
+
+[caps]
+# Ceilings for every loop. A spec may lower any of these, never raise them.
+max_turns = 40           # loop 1, session: claude -p --max-turns
+max_budget_usd = 3.0     # loop 1, session: claude -p --max-budget-usd (a client-side estimate)
+continuations = 3        # loop 2, finish: Stop-hook blocks per session
+retries = 1              # loop 3, retry: claude --resume rounds per task
+tasks_per_queue_run = 3  # loop 4, queue: tasks one dispatcher wake-up may start
+parallel = 2             # loop 4, queue: workbenches at once
+time_limit_sec = 1500    # wall clock for one claude -p session
+review_max_turns = 25    # the adversarial reviewer's session
+review_max_budget_usd = 1.0
+
+[sandbox]
+# Shell commands Claude runs reach only these hosts. The checks after the session reach none.
+allowed_domains = ["pypi.org", "files.pythonhosted.org"]
+
+[setup]
+# Runs on the BASE commit with network, under bubblewrap, before Claude starts and before the
+# checks. {venv} is the task's virtualenv; {src} is the tree being installed.
+commands = [
+  "uv venv -q --python python3 {venv}",
+  "uv pip install -q -p {venv} -e '{src}[tests]'",
+]
+
+[checks]
+# The repository's own suite, run on every task in a fresh clone of the result, no network.
+always = ["python -m pytest -q -p no:cacheprovider -x"]

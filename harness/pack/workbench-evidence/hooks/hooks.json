@@ -1,0 +1,4 @@
+{
+  "description": "Workbench evidence: session.append and tool.call results as JSONL",
+  "modules": ["./register.ts"]
+}

@@ -1,0 +1,41 @@
+# Classes of change, and how a human approves each. Humans approve classes, not every PR.
+#
+#   per_pr     a person reviews this PR (high risk, new behaviour, anything unproven)
+#   batch      a person approves the batch plan once; every instance that passes its checks
+#              and its review joins the batch, and one command merges the batch
+#   graduated  merges by policy on code we own, but only while the class's cases hold
+#              pass^k on the current pack (harness/proofs/<class>.json, written by prove.sh)
+#
+# The router (harness/lib/router.ts) reads these rows. High-risk paths (CI, manifests,
+# instruction files, security paths) send any change to per_pr, whatever its class says.
+
+[classes.docs]
+description = "Documentation pages under docs/ and the mkdocs nav: mechanical, no code"
+approval = "batch"
+batch = "docs-2026-10"
+graduated = false        # becomes true once prove.sh records pass^3 for the docs cases
+auto_merge = false
+
+[classes.bugfix]
+description = "A bug fix with a reproducing test that fails on the base and passes on the result"
+approval = "per_pr"
+fail_first = true
+graduated = false
+
+[classes.feature]
+description = "A small new option on an existing public function"
+approval = "per_pr"
+graduated = false
+
+[classes.packaging]
+description = "Anything that changes how the package is built, installed or invoked"
+approval = "per_pr"
+risk = "high"
+graduated = false
+
+[batches.docs-2026-10]
+# One human yes for the whole batch plan. Each instance still passes its own checks and review.
+approved = true
+approved_by = "yogi.aradhye"
+approved_at = "2026-10-12"
+note = "Contributor documentation for the test workflow, issues #430 and #438"

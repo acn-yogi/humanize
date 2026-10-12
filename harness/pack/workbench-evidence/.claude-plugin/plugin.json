@@ -1,0 +1,6 @@
+{
+  "name": "workbench-evidence",
+  "version": "0.1.0",
+  "description": "Workbench evidence mod: appends each conversation row and each tool call result as one JSON line under /var/workbench/evidence, which workbench-init folds into packet.json.",
+  "author": { "name": "Workbench sandbox" }
+}
