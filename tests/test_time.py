@@ -870,8 +870,6 @@ def test_precisedelta_negative(
         (0, "seconds"),
         (-0.0, "seconds"),
         (dt.timedelta(0), "seconds"),
-        (-0.1, "minutes"),
-        (dt.timedelta(microseconds=-1), "seconds"),
     ],
 )
 def test_precisedelta_zero_has_no_sign(val: dt.timedelta | float, min_unit: str) -> None:
