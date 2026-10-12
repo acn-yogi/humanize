@@ -21,7 +21,6 @@ nav:
   - Time: time.md
   - Filesize: filesize.md
   - Lists: lists.md
-  - Command line: cli.md
   - Internationalisation: i18n.md
 
 plugins:

@@ -24,17 +24,25 @@ def test_commands(
     assert capsys.readouterr().out == expected
 
 
-def test_bad_value(capsys: pytest.CaptureFixture[str]) -> None:
-    assert main(["naturalsize", "abc"]) != 0
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["naturalsize", "abc"],
+        ["naturalsize", "nan"],
+        ["intcomma", "abc"],
+        ["intcomma", "inf"],
+        ["intword", "abc"],
+        ["intword", "nan"],
+        ["naturaldelta", "abc"],
+        ["naturaldelta", "inf"],
+        ["naturaldelta", "nan"],
+    ],
+)
+def test_bad_value(capsys: pytest.CaptureFixture[str], argv: list[str]) -> None:
+    assert main(argv) != 0
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err
-
-
-def test_bad_seconds_is_usage_error() -> None:
-    with pytest.raises(SystemExit) as exc:
-        main(["naturaldelta", "abc"])
-    assert exc.value.code != 0
 
 
 def test_no_command() -> None:

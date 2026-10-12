@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from collections.abc import Sequence
 
@@ -28,11 +29,24 @@ def _build_parser() -> argparse.ArgumentParser:
     word.add_argument("value")
 
     delta = sub.add_parser("naturaldelta", help="describe a duration in seconds")
-    delta.add_argument("value", type=float, help="number of seconds")
+    delta.add_argument("value", help="number of seconds")
     return parser
 
 
+def _check_finite(value: str) -> None:
+    """Raise ValueError unless value is a finite number."""
+    try:
+        number = float(value)
+    except ValueError:
+        msg = f"not a number: {value!r}"
+        raise ValueError(msg) from None
+    if not math.isfinite(number):
+        msg = f"not a finite number: {value!r}"
+        raise ValueError(msg)
+
+
 def _run(args: argparse.Namespace) -> str:
+    _check_finite(args.value)
     if args.command == "naturalsize":
         return humanize.naturalsize(
             args.value, binary=args.binary, gnu=args.gnu, format=args.format
@@ -41,7 +55,7 @@ def _run(args: argparse.Namespace) -> str:
         return humanize.intcomma(args.value)
     if args.command == "intword":
         return humanize.intword(args.value)
-    return humanize.naturaldelta(args.value)
+    return humanize.naturaldelta(float(args.value))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
