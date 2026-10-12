@@ -1,0 +1,205 @@
+{
+  "v": 1,
+  "taskId": "t-01M4RYVYEG6H31MRD8C2N01K04",
+  "trial": null,
+  "spec": {
+    "id": "0001-docs-local-testing",
+    "title": "docs: document how to run the test suite locally",
+    "issue": "python-humanize/humanize#430",
+    "class": "docs",
+    "approvedBy": "yogi.aradhye",
+    "scope": [
+      "docs/testing.md",
+      "mkdocs.yml"
+    ]
+  },
+  "placement": "one machine: git worktree, native sandbox (bubblewrap), no microVM",
+  "claudeCodeVersion": "2.1.296 (Claude Code)",
+  "packId": "pack-d812d07de777",
+  "models": {
+    "worker": "sonnet",
+    "reviewer": "opus"
+  },
+  "caps": {
+    "max_turns": 30,
+    "max_budget_usd": 1.5,
+    "continuations": 3,
+    "retries": 1,
+    "tasks_per_queue_run": 3,
+    "parallel": 2,
+    "time_limit_sec": 1500,
+    "review_max_turns": 25,
+    "review_max_budget_usd": 1.0
+  },
+  "startedAt": "2026-10-12T21:04:06Z",
+  "endedAt": "2026-10-12T21:10:40Z",
+  "baseBranch": "main",
+  "baseCommit": "92871c5f72ea17a8cf219c37d0b09ffc10701f47",
+  "headCommit": "06a9ca2f671600038d7f75c72f90452c946af78c",
+  "changedPaths": [
+    "docs/testing.md",
+    "mkdocs.yml"
+  ],
+  "linesChanged": 48,
+  "checks": [
+    {
+      "cmd": "python -m pytest -q -p no:cacheprovider -x",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/docs_testing.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    }
+  ],
+  "allChecksPass": true,
+  "grading": null,
+  "scope": {
+    "harness": [],
+    "outside": []
+  },
+  "review": {
+    "verdict": "approve",
+    "reasons": [
+      "Only docs/testing.md and mkdocs.yml changed, nav entry placed as specified",
+      "All three pytest commands on the page run and pass (744 passed/112 skipped; 76 passed; 46 passed)",
+      "All six required points covered and the skip/CI claims match tests/test_i18n.py and test.yml",
+      "Nits only: two identically-named commits to squash, script invocation relies on shell fallback"
+    ]
+  },
+  "decision": {
+    "taskId": "t-01M4RYVYEG6H31MRD8C2N01K04",
+    "spec": "0001-docs-local-testing",
+    "className": "docs",
+    "path": "batch_plan",
+    "reasons": [
+      "instance of approved batch plan docs-2026-10"
+    ],
+    "packId": "pack-d812d07de777",
+    "next": "Joins approved batch docs-2026-10: one person approves the batch with harness/bin/approve-batch.sh.",
+    "at": "2026-10-12T21:10:39.793Z"
+  },
+  "loops": {
+    "sessions": [
+      {
+        "sessionId": "6fff9f7a-6432-4d06-b77d-bcaf4c294e4b",
+        "subtype": "success",
+        "isError": false,
+        "turns": 4,
+        "costUsd": 0.0692162,
+        "denials": 0,
+        "result": "I added `docs/testing.md` and put \"Testing\" in the `mkdocs.yml` nav after \"Internationalisation\".\n\nI ran the `-k naturalsize` command on tests/test_filesize.py and it passed (76 tests). The full suite gives 744 passed and 112 skipped, with the skips coming from the missing `.mo` files. The other pytest command, `python -m pytest tests/test_filesize.py`, I did not run on its own. I ran the commands with the venv's Python rather than a bare `python`, and I did not run the install or the `msgfmt` script.\n\nThe page covers all six points in four short sections: Install, Run the tests, Skipped tests",
+        "round": 0,
+        "role": "worker",
+        "exit": 0
+      },
+      {
+        "sessionId": "b133541d-1c52-4930-9b19-14078c8b87e6",
+        "subtype": "success",
+        "isError": false,
+        "turns": 4,
+        "costUsd": 0.2495804,
+        "denials": 0,
+        "result": "I recommend rejecting this change. The page has the right shape and every check passes, but its `-k` example doesn't narrow anything down, so it fails to show the one thing that section exists to teach.\n\n**What I checked.**\n- Only `docs/testing.md` and `mkdocs.yml` changed. The nav entry \"Testing\" sits after \"Internationalisation\", and nothing under `.github/`, source, tests or `tox.ini` was touched.\n- I ran all three pytest commands on the page from the repository root. All pass. The full suite gives 744 passed and 112 skipped.\n- The tone and heading style match the existing pages, and the pa",
+        "round": 0,
+        "role": "reviewer"
+      },
+      {
+        "sessionId": "6fff9f7a-6432-4d06-b77d-bcaf4c294e4b",
+        "subtype": "success",
+        "isError": false,
+        "turns": 4,
+        "costUsd": 0.09966120000000003,
+        "denials": 0,
+        "result": "I fixed all three findings in `docs/testing.md`. I re-ran the two changed or affected pytest commands, and both passed. I did not re-run the full suite after this edit, and the page text is the only thing that changed.\n\n- **`-k` example:** it is now `python -m pytest tests/test_number.py -k intword`. That selects 46 of the 241 tests in the file, so it shows a focused run. It passed.\n- **Script requirements:** the page now says to run `scripts/generate-translation-binaries.sh` from the repository root and that it needs `msgfmt` on your `PATH`.\n- **Skip reasons:** the page now gives both. Some t",
+        "round": 1,
+        "role": "worker",
+        "exit": 0
+      },
+      {
+        "sessionId": "9cc1910f-ed99-4c3a-a3c7-dd4b356dd6ae",
+        "subtype": "success",
+        "isError": false,
+        "turns": 4,
+        "costUsd": 0.16979,
+        "denials": 0,
+        "result": "I'd approve this. I couldn't build a convincing case against merging it.\n\n**What I checked**\n- **Scope:** only two files change, `docs/testing.md` (new) and `mkdocs.yml`. \"Testing\" sits right after \"Internationalisation\" in the nav, as the spec asks. Nothing under `.github/`, no source, tests, `pyproject.toml` or `tox.ini` changes. No tests were weakened or skipped.\n- **The pytest commands, run against the installed result:**\n  - `python -m pytest`: 744 passed, 112 skipped.\n  - `python -m pytest tests/test_filesize.py`: 76 passed.\n  - `python -m pytest tests/test_number.py -k intword`: 46 pass",
+        "round": 1,
+        "role": "reviewer"
+      }
+    ],
+    "finish": [
+      {
+        "at": "2026-10-12T21:05:07Z",
+        "loop": "finish",
+        "result": "pass",
+        "continuation": 0,
+        "checks": 1,
+        "stopHookActive": "false"
+      },
+      {
+        "at": "2026-10-12T21:08:25Z",
+        "loop": "finish",
+        "result": "pass",
+        "continuation": 0,
+        "checks": 1,
+        "stopHookActive": "false"
+      }
+    ],
+    "scopeDenials": [],
+    "retries": 1
+  },
+  "costUsd": 0.5882478,
+  "packEvidenceLines": 33,
+  "rounds": [
+    {
+      "round": 0,
+      "allChecksPass": true,
+      "grading": null,
+      "changedPaths": [
+        "docs/testing.md",
+        "mkdocs.yml"
+      ],
+      "verdict": {
+        "verdict": "reject",
+        "reasons": [
+          "The -k example selects all 76 tests in tests/test_filesize.py (same as running the file), so it does not show focusing a test run as the spec intends",
+          "The translation-binaries script has to run from the repo root and needs msgfmt on PATH; the page doesn't say so",
+          "The skip explanation leaves out the other skip reason in test_i18n.py"
+        ]
+      },
+      "path": "per_pr",
+      "reasons": [
+        "adversarial review raised findings",
+        "The -k example selects all 76 tests in tests/test_filesize.py (same as running the file), so it does not show focusing a test run as the spec intends",
+        "The translation-binaries script has to run from the repo root and needs msgfmt on PATH; the page doesn't say so",
+        "The skip explanation leaves out the other skip reason in test_i18n.py"
+      ]
+    },
+    {
+      "round": 1,
+      "allChecksPass": true,
+      "grading": null,
+      "changedPaths": [
+        "docs/testing.md",
+        "mkdocs.yml"
+      ],
+      "verdict": {
+        "verdict": "approve",
+        "reasons": [
+          "Only docs/testing.md and mkdocs.yml changed, nav entry placed as specified",
+          "All three pytest commands on the page run and pass (744 passed/112 skipped; 76 passed; 46 passed)",
+          "All six required points covered and the skip/CI claims match tests/test_i18n.py and test.yml",
+          "Nits only: two identically-named commits to squash, script invocation relies on shell fallback"
+        ]
+      },
+      "path": "batch_plan",
+      "reasons": [
+        "instance of approved batch plan docs-2026-10"
+      ]
+    }
+  ]
+}

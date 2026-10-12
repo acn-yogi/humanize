@@ -65,6 +65,21 @@ def main() -> None:
          "Outside scope: " + ", ".join(code(x) for x in sc["outside"] + sc["harness"]) + "."))
     w("")
 
+    rounds = p.get("rounds") or []
+    if len(rounds) > 1:
+        w("### Rounds: what was rejected, and what the retry fixed")
+        w("| Round | Checks | Reviewer | Router |")
+        w("|---|---|---|---|")
+        for r in rounds:
+            v = (r.get("verdict") or {}).get("verdict", "none")
+            w(f"| {r['round']} | {'pass' if r['allChecksPass'] else 'FAIL'} | {v} | {r['path']} |")
+        for r in rounds[:-1]:
+            w("")
+            w(f"Round {r['round']} findings, handed back to the same session with `claude --resume` (loop 3):")
+            for reason in (r.get("verdict") or {}).get("reasons") or r.get("reasons", []):
+                w(f"- {reason}")
+        w("")
+
     rv = p.get("review")
     w("### Adversarial review")
     if rv:

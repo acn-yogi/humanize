@@ -1,0 +1,33 @@
+{
+  "taskId": "t-01M4RYVYEG6H31MRD8C2N01K04",
+  "changedPaths": [
+    "docs/testing.md",
+    "mkdocs.yml"
+  ],
+  "touchesCi": false,
+  "touchesInstructions": false,
+  "touchesManifests": false,
+  "touchesSecurityPaths": false,
+  "touchesLinks": false,
+  "linesChanged": 48,
+  "checks": [
+    {
+      "cmd": "python -m pytest -q -p no:cacheprovider -x",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/docs_testing.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    }
+  ],
+  "allChecksPass": true,
+  "resultSha": "06a9ca2f671600038d7f75c72f90452c946af78c",
+  "baseSha": "92871c5f72ea17a8cf219c37d0b09ffc10701f47",
+  "grading": null,
+  "resultBundleVersionId": "local-t-01M4RYVYEG6H31MRD8C2N01K04",
+  "resultBundleETag": "\"8e32c8fe9b391199e1a7490ba0d367f4cd1e9ea2c9acc5083584b0b15ce3c7b9\""
+}

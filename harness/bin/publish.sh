@@ -39,7 +39,8 @@ case "$path" in
 esac
 for l in "${labels[@]}"; do "${GH[@]}" label create "$l" --repo "$fork" --force --color 5319e7 >/dev/null 2>&1 || true; done
 
-"${GIT[@]}" push --quiet origin "refs/heads/${branch}:refs/heads/${branch}" >&2
+push_out="$("${GIT[@]}" push --quiet origin "refs/heads/${branch}:refs/heads/${branch}" 2>&1)" \
+  || { printf '%s\n' "$push_out" >&2; die "publish: push failed"; }
 title="[workbench] $(jq -r .title "$plan")"
 label_args=(); for l in "${labels[@]}"; do label_args+=(--label "$l"); done
 url="$("${GH[@]}" pr create --repo "$fork" --base "$basebr" --head "$branch" --title "$title" \

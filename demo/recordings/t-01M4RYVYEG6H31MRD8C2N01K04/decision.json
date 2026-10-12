@@ -1,0 +1,12 @@
+{
+  "taskId": "t-01M4RYVYEG6H31MRD8C2N01K04",
+  "spec": "0001-docs-local-testing",
+  "className": "docs",
+  "path": "batch_plan",
+  "reasons": [
+    "instance of approved batch plan docs-2026-10"
+  ],
+  "packId": "pack-d812d07de777",
+  "next": "Joins approved batch docs-2026-10: one person approves the batch with harness/bin/approve-batch.sh.",
+  "at": "2026-10-12T21:10:39.793Z"
+}

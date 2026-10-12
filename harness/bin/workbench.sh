@@ -294,6 +294,11 @@ PROMPT
   jq -n --arg t "$task_id" '{v: 1, taskId: $t, partial: true}' > "${rdir}/packet.json"
   node --no-warnings "${T}/harness/lib/route.ts" "$rdir" "${T}/harness" "$pack_id" > /dev/null
   log "router: $(jq -r '"\(.path): \(.reasons | join("; "))"' "${rdir}/decision.json" | cut -c1-300)"
+  # Each round's outcome stays in the packet, so a rejection and its retry are on the record.
+  jq -nc --argjson r "$round" --argjson ok "$all_pass" --slurpfile d "${rdir}/decision.json" \
+    --argjson v "$(cat "${rdir}/verdict.json" 2>/dev/null || echo null)" --slurpfile f "${rdir}/facts.json" \
+    '{round: $r, allChecksPass: $ok, grading: $f[0].grading, changedPaths: $f[0].changedPaths, verdict: $v,
+      path: $d[0].path, reasons: $d[0].reasons}' >> "${rdir}/rounds.jsonl"
   event "${tdir}/loops.jsonl" --arg loop check --argjson round "$round" --arg path "$(jq -r .path "${rdir}/decision.json")" \
     --argjson allChecksPass "$all_pass" --arg verdict "$(jq -r '.verdict // "none"' "${rdir}/verdict.json" 2>/dev/null || echo none)"
 }
@@ -342,7 +347,8 @@ jq -n --arg t "$task_id" --arg trial "$trial" --slurpfile plan "$plan" --slurpfi
   --slurpfile scope "${rdir}/scope.json" --slurpfile decision "${rdir}/decision.json" \
   --argjson verdict "$(cat "${rdir}/verdict.json" 2>/dev/null || echo null)" --argjson sessions "$sessions" \
   --slurpfile loops "${rdir}/loops.jsonl" --arg v "$claude_version" --arg pack "$pack_id" --arg base "$base" \
-  --arg s "$started_at" --arg e "$ended_at" --argjson ev "$evidence_lines" '
+  --arg s "$started_at" --arg e "$ended_at" --argjson ev "$evidence_lines" \
+  --slurpfile rounds "${rdir}/rounds.jsonl" '
   ($plan[0]) as $p | ($facts[0]) as $f |
   {v: 1, taskId: $t, trial: (if $trial == "" then null else ($trial | tonumber) end),
    spec: {id: $p.id, title: $p.title, issue: $p.issue, class: $p.class, approvedBy: $p.approvedBy, scope: $p.scope},
@@ -351,7 +357,7 @@ jq -n --arg t "$task_id" --arg trial "$trial" --slurpfile plan "$plan" --slurpfi
    startedAt: $s, endedAt: $e, baseBranch: $base, baseCommit: $f.baseSha, headCommit: $f.resultSha,
    changedPaths: $f.changedPaths, linesChanged: $f.linesChanged,
    checks: $f.checks, allChecksPass: $f.allChecksPass, grading: $f.grading, scope: $scope[0],
-   review: $verdict, decision: $decision[0],
+   review: $verdict, decision: $decision[0], rounds: $rounds,
    loops: {
      sessions: $sessions,
      finish: [$loops[] | select(.loop == "finish")],

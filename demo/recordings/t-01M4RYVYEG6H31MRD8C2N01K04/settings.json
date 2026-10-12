@@ -1,0 +1,115 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "disableBypassPermissionsMode": "disable",
+    "allow": [
+      "Read(//home/yogi/.workbench-demo/t-01M4RYVYEG6H31MRD8C2N01K04/work/**)",
+      "Edit(//home/yogi/.workbench-demo/t-01M4RYVYEG6H31MRD8C2N01K04/work/**)",
+      "Glob",
+      "Grep",
+      "Bash"
+    ],
+    "deny": [
+      "WebFetch",
+      "WebSearch",
+      "mcp__*",
+      "Edit(//home/yogi/.workbench-demo/t-01M4RYVYEG6H31MRD8C2N01K04/work/.git/**)",
+      "Edit(//home/yogi/.workbench-demo/t-01M4RYVYEG6H31MRD8C2N01K04/work/.git)",
+      "Read(//home/yogi/.claude)",
+      "Read(//home/yogi/.claude/**)",
+      "Read(//mnt/c/Users/Default/AppData)",
+      "Read(//mnt/c/Users/Default/AppData/**)",
+      "Read(//mnt/c/Users/yogi.aradhye/.aws)",
+      "Read(//mnt/c/Users/yogi.aradhye/.aws/**)",
+      "Read(//mnt/c/Users/yogi.aradhye/.azure)",
+      "Read(//mnt/c/Users/yogi.aradhye/.azure/**)",
+      "Read(//mnt/c/Users/yogi.aradhye/.claude)",
+      "Read(//mnt/c/Users/yogi.aradhye/.claude/**)",
+      "Read(//mnt/c/Users/yogi.aradhye/.config)",
+      "Read(//mnt/c/Users/yogi.aradhye/.config/**)",
+      "Read(//mnt/c/Users/yogi.aradhye/.ssh)",
+      "Read(//mnt/c/Users/yogi.aradhye/.ssh/**)",
+      "Read(//mnt/c/Users/yogi.aradhye/AppData)",
+      "Read(//mnt/c/Users/yogi.aradhye/AppData/**)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "autoAllowBashIfSandboxed": true,
+    "allowUnsandboxedCommands": false,
+    "excludedCommands": [],
+    "filesystem": {
+      "denyRead": [
+        "/home/yogi/.claude",
+        "/mnt/c/Users/Default/AppData",
+        "/mnt/c/Users/yogi.aradhye/.aws",
+        "/mnt/c/Users/yogi.aradhye/.azure",
+        "/mnt/c/Users/yogi.aradhye/.claude",
+        "/mnt/c/Users/yogi.aradhye/.config",
+        "/mnt/c/Users/yogi.aradhye/.ssh",
+        "/mnt/c/Users/yogi.aradhye/AppData"
+      ]
+    },
+    "network": {
+      "allowedDomains": [
+        "pypi.org",
+        "files.pythonhosted.org"
+      ]
+    },
+    "credentials": {
+      "envVars": [
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "mode": "deny"
+        },
+        {
+          "name": "ANTHROPIC_AUTH_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "CLAUDE_CODE_OAUTH_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "GH_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "GITHUB_TOKEN",
+          "mode": "deny"
+        }
+      ]
+    }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/yogi/.workbench-demo/t-01M4RYVYEG6H31MRD8C2N01K04/trusted/harness/hooks/scope-guard.sh /home/yogi/.workbench-demo/t-01M4RYVYEG6H31MRD8C2N01K04",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/yogi/.workbench-demo/t-01M4RYVYEG6H31MRD8C2N01K04/trusted/harness/hooks/stop-checks.sh /home/yogi/.workbench-demo/t-01M4RYVYEG6H31MRD8C2N01K04",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "DISABLE_UPDATES": "1",
+    "DISABLE_AUTOUPDATER": "1"
+  }
+}

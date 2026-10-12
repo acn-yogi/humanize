@@ -1,0 +1,8 @@
+{"at":"2026-10-12T21:04:06Z","loop":"task","event":"start","taskId":"t-01M4RYVYEG6H31MRD8C2N01K04","spec":"0001-docs-local-testing","packId":"pack-d812d07de777"}
+{"at":"2026-10-12T21:05:07Z","loop":"finish","result":"pass","continuation":0,"checks":1,"stopHookActive":"false"}
+{"at":"2026-10-12T21:05:08Z","loop":"session","round":0,"subtype":"success","turns":4,"costUsd":0.0692162}
+{"at":"2026-10-12T21:07:40Z","loop":"check","round":0,"path":"per_pr","allChecksPass":true,"verdict":"reject"}
+{"at":"2026-10-12T21:07:40Z","loop":"retry","round":1,"sessionId":"6fff9f7a-6432-4d06-b77d-bcaf4c294e4b"}
+{"at":"2026-10-12T21:08:25Z","loop":"finish","result":"pass","continuation":0,"checks":1,"stopHookActive":"false"}
+{"at":"2026-10-12T21:08:26Z","loop":"session","round":1,"subtype":"success","turns":4,"costUsd":0.09966120000000003}
+{"at":"2026-10-12T21:10:40Z","loop":"check","round":1,"path":"batch_plan","allChecksPass":true,"verdict":"approve"}

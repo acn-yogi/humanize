@@ -42,7 +42,7 @@ wake() {
   cap="$(python3 -c 'import tomllib,sys;print(tomllib.load(open(sys.argv[1],"rb"))["caps"]["tasks_per_queue_run"])' "${REPO}/harness/config.toml")"
   par="$(python3 -c 'import tomllib,sys;print(tomllib.load(open(sys.argv[1],"rb"))["caps"]["parallel"])' "${REPO}/harness/config.toml")"
   echo "queue: $(jq length <<< "$rows") spec(s); this wake-up starts at most ${cap}, ${par} at a time"
-  jq -r '.[] | "  \(.action | ascii_upcase | .[0:4])  \(.id)\t\(.class)\t\(.forecast)"' <<< "$rows" | column -t -s $'\t'
+  jq -r '.[] | "  \(.action | ascii_upcase)\t\(.id)\t\(.class)\t\(.forecast)"' <<< "$rows" | column -t -s $'\t'
   [ "$dry" = 0 ] || return 0
   while IFS= read -r id; do
     if [ "${#only[@]}" -gt 0 ] && ! printf '%s\n' "${only[@]}" | grep -qx "$id"; then continue; fi
