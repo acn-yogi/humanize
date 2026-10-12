@@ -47,7 +47,7 @@ confined() {
     if [ -d "$s" ]; then args+=(--tmpfs "$s"); else args+=(--ro-bind /dev/null "$s"); fi
   done < <(wb_secrets)
   args+=(--tmpfs "$WB_HOME")
-  for s in "$@"; do args+=(--ro-bind "$s" "$s"); done
+  for s in "$@"; do [ -e "$s" ] && args+=(--ro-bind "$s" "$s"); done
   [ "$mode" != net ] || args+=(--bind "${HOME}/.cache/uv" "${HOME}/.cache/uv")
   args+=(--bind "$dir" "$dir" --chdir "$dir")
   timeout --kill-after=10 "${WB_CHECK_TIMEOUT:-600}" bwrap "${args[@]}" -- \

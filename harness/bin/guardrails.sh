@@ -79,13 +79,21 @@ expect token       "model token visible to shell commands?"       "$(probe token
 expect credentials "Bash reads the person's credential files?"    "$(probe credentials)"   '^denied'
 expect write-out   "Bash writes outside the worktree?"            "$(probe write-outside)" '^denied'
 expect write-in    "Bash writes inside the worktree"              "$(probe write-inside)"  '^allowed'
-n="$(denied_tool Read .credentials.json)"
-[ "$n" -gt 0 ] && row PASS "Read tool on the Windows Claude login" "denied by Claude Code (${n} denial)" \
-               || row FAIL "Read tool on the Windows Claude login" "no denial recorded"
+# A refusal can come from Claude Code's permission rules or, earlier in the chain, from the
+# pack's policy mod; the evidence mod records the second. Either counts, and the row names which.
+pack_denied() { jq -r --arg t "$1" --arg p "$2" 'select(.event == "tool.call" and .tool == $t and .denied != null and ((.path // "") | contains($p))) | .denied' "${tdir}"/evidence/*.jsonl 2>/dev/null | head -1; }
+refused() {  # refused <tool> <path fragment>: which layer refused it, or empty
+  local n m
+  n="$(denied_tool "$1" "$2")"; m="$(pack_denied "$1" "$2")"
+  if [ -n "$m" ]; then echo "refused by the pack's policy mod"
+  elif [ "${n:-0}" -gt 0 ]; then echo "refused by Claude Code's permission rules"; fi
+}
+r="$(refused Read .credentials.json)"
+[ -n "$r" ] && row PASS "Read tool on the Windows Claude login" "$r"             || row FAIL "Read tool on the Windows Claude login" "no refusal recorded"
 if [ -e "${HOME}/wb-probe-write.txt" ] || [ -e "${HOME}/wb-probe-bash.txt" ]; then
   row FAIL "Write tool outside the worktree" "a file appeared in ${HOME}"
 else
-  row PASS "Write tool outside the worktree" "no file appeared ($(denied_tool Write wb-probe-write) denial)"
+  row PASS "Write tool outside the worktree" "no file appeared; $(refused Write wb-probe-write || true)"
 fi
 scope_denied="$(jq -r 'select(.loop == "scope" and .decision == "deny") | .path' "${tdir}/loops.jsonl" | paste -sd, -)"
 if g -C "$work" diff --quiet -- harness/config.toml; then
