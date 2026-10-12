@@ -1,0 +1,13 @@
+# Loop 4 on a dedicated runner: one dispatcher wake-up. Install as a user unit:
+#   cp harness/systemd/workbench-dispatch.* ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now workbench-dispatch.timer
+# The runner is dedicated: no personal files or credentials, a service key with its own
+# Console workspace spend limit, push rights to this fork only.
+[Unit]
+Description=Workbench dispatcher: run the next approved specs
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/workbench-demo
+EnvironmentFile=%h/.config/workbench/env
+ExecStart=%h/workbench-demo/harness/bin/dispatch.sh
