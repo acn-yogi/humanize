@@ -262,6 +262,8 @@ $(cat "${rdir}/facts.json")
 $(cat "${rdir}/scope.json")
 
 Argue against merging it. Read the diff (git diff ${base_sha} HEAD) and the files it touches.
+You may run the tests: \`${tdir}/venv/bin/python -m pytest -q -p no:cacheprovider\` (that
+environment has this exact result installed).
 Look for behaviour the spec did not ask for, anything the spec asked for that is missing,
 weakened or skipped tests, claims that read as correct but are not, changes outside the
 spec's scope, and anything a maintainer of this project would push back on. Do not modify
