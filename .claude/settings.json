@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "disableBypassPermissionsMode": "disable",
+    "ask": [
+      "Edit(/harness/**)",
+      "Edit(/specs/**)",
+      "Edit(/.claude/**)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "allowUnsandboxedCommands": false,
+    "network": {
+      "allowedDomains": [
+        "pypi.org",
+        "files.pythonhosted.org",
+        "github.com",
+        "api.github.com"
+      ]
+    }
+  }
+}

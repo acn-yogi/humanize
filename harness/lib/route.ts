@@ -9,6 +9,15 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { decide, type RouteDecision } from "./router.ts";
+import { classifyPaths, RISK_FLAGS } from "./risk.ts";
+
+// The same words router.ts uses for each high-risk category.
+const LABEL: Record<string, string> = {
+  touchesCi: "CI configuration or code owners",
+  touchesInstructions: "agent instruction files",
+  touchesManifests: "package manifests or lockfiles",
+  touchesSecurityPaths: "auth or security paths",
+};
 
 function readJson(file: string): any {
   try {
@@ -52,9 +61,16 @@ if (scope.harness.length > 0) {
     imageId: packId,
     driver: "guest",
   });
-  // A class marked high risk goes to a person whatever its paths, on top of the path rules.
-  if (decision.path !== "reject" && classRow?.risk === "high" && !decision.reasons.some((r) => r.startsWith("high risk"))) {
-    decision = { path: "per_pr", reasons: [`high risk: class ${plan.class} is high risk by policy`, ...decision.reasons] };
+  // decide() stops at the first reason (a reviewer's findings come before the path rules), so
+  // state the path risk here too: a person reading the PR sees every reason it stops for them.
+  if (decision.path !== "reject") {
+    const { hits } = classifyPaths(Array.isArray(facts?.changedPaths) ? facts.changedPaths : []);
+    const pathRisk = RISK_FLAGS.filter((f) => hits[f].length > 0)
+      .map((f) => `high risk: touches ${LABEL[f]} (${hits[f].slice(0, 5).join(", ")})`);
+    const classRisk = classRow?.risk === "high" ? [`high risk: class ${plan.class} is high risk by policy`] : [];
+    if (pathRisk.length || classRisk.length) {
+      decision = { path: "per_pr", reasons: [...pathRisk, ...classRisk, ...decision.reasons.filter((r) => !r.startsWith("high risk: touches"))] };
+    }
   }
   if (decision.path === "per_pr" && decision.reasons[0] === "class not graduated") {
     decision.reasons[0] = `class ${plan.class} is approved per PR (harness/classes.toml)`;

@@ -5,8 +5,10 @@
 #   harness/bin/replay.sh [demo/recordings/<run>] [--fast]
 set -uo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-dir="${1:-$(ls -d "${REPO}"/demo/recordings/t-* 2>/dev/null | tail -1)}"
-delay=0.6; [ "${2:-}" = --fast ] && delay=0.05
+dir="" delay=0.6
+for a in "$@"; do case "$a" in --fast) delay=0.05 ;; *) dir="$a" ;; esac; done
+# Default: the first recorded run, spec 0001 (PR #1).
+[ -n "$dir" ] || dir="$(ls -d "${REPO}"/demo/recordings/t-* 2>/dev/null | head -1)"
 [ -f "${dir}/console.log" ] || { echo "no console.log in ${dir}"; exit 2; }
 echo "=== replay of a recorded run: ${dir#"${REPO}"/} ==="
 while IFS= read -r line; do printf '%s\n' "$line"; sleep "$delay"; done < "${dir}/console.log"

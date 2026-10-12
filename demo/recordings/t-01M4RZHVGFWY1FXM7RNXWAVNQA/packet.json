@@ -1,0 +1,279 @@
+{
+  "v": 1,
+  "taskId": "t-01M4RZHVGFWY1FXM7RNXWAVNQA",
+  "trial": null,
+  "spec": {
+    "id": "0002-bugfix-precisedelta-sign",
+    "title": "precisedelta() keeps the sign of a negative timedelta",
+    "issue": "python-humanize/humanize#379",
+    "class": "bugfix",
+    "approvedBy": "yogi.aradhye",
+    "scope": [
+      "src/humanize/time.py",
+      "tests/test_time.py"
+    ]
+  },
+  "placement": "one machine: git worktree, native sandbox (bubblewrap), no microVM",
+  "claudeCodeVersion": "2.1.296 (Claude Code)",
+  "packId": "pack-d812d07de777",
+  "models": {
+    "worker": "sonnet",
+    "reviewer": "opus"
+  },
+  "caps": {
+    "max_turns": 40,
+    "max_budget_usd": 3.0,
+    "continuations": 3,
+    "retries": 1,
+    "tasks_per_queue_run": 3,
+    "parallel": 2,
+    "time_limit_sec": 1500,
+    "review_max_turns": 25,
+    "review_max_budget_usd": 1.0
+  },
+  "startedAt": "2026-10-12T21:16:04Z",
+  "endedAt": "2026-10-12T21:26:09Z",
+  "baseBranch": "main",
+  "baseCommit": "52a0efb50be93f797ba773b407ded39149984420",
+  "headCommit": "999bd24cb4d4ea2ec023c066b6234ec365139a9b",
+  "changedPaths": [
+    "src/humanize/time.py",
+    "tests/test_time.py"
+  ],
+  "linesChanged": 57,
+  "checks": [
+    {
+      "cmd": "python -m pytest -q -p no:cacheprovider -x",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/precisedelta_sign.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/changed.py tests/test_time.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    }
+  ],
+  "allChecksPass": true,
+  "grading": {
+    "mode": "fail-first",
+    "caseId": null,
+    "patchApplied": false,
+    "baseChecks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 1
+      }
+    ],
+    "checks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 0,
+        "runs": 1,
+        "flaky": false
+      }
+    ],
+    "ok": true,
+    "reasons": []
+  },
+  "scope": {
+    "harness": [],
+    "outside": []
+  },
+  "review": {
+    "verdict": "reject",
+    "reasons": [
+      "New test lines exceed 88 chars (tests/test_time.py:846-848, 862, 875); E501 is enabled via ruff 'E' and black would reformat, so pre-commit fails",
+      "precisedelta(timedelta(microseconds=-1)) returns '-0 seconds', a rendered zero with a sign, untested against the 'zero never gains a sign' constraint",
+      "Sign derived from clock comparison (date > now) plus a dead datetime guard instead of checking the input's sign directly",
+      "Two commits with the same message, the second partly undoing the first; should be squashed"
+    ]
+  },
+  "decision": {
+    "taskId": "t-01M4RZHVGFWY1FXM7RNXWAVNQA",
+    "spec": "0002-bugfix-precisedelta-sign",
+    "className": "bugfix",
+    "path": "per_pr",
+    "reasons": [
+      "adversarial review raised findings",
+      "New test lines exceed 88 chars (tests/test_time.py:846-848, 862, 875); E501 is enabled via ruff 'E' and black would reformat, so pre-commit fails",
+      "precisedelta(timedelta(microseconds=-1)) returns '-0 seconds', a rendered zero with a sign, untested against the 'zero never gains a sign' constraint",
+      "Sign derived from clock comparison (date > now) plus a dead datetime guard instead of checking the input's sign directly",
+      "Two commits with the same message, the second partly undoing the first; should be squashed"
+    ],
+    "packId": "pack-d812d07de777",
+    "next": "A person reviews this PR.",
+    "at": "2026-10-12T21:26:09.344Z"
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "allChecksPass": true,
+      "grading": {
+        "mode": "fail-first",
+        "caseId": null,
+        "patchApplied": false,
+        "baseChecks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 1
+          }
+        ],
+        "checks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 0,
+            "runs": 1,
+            "flaky": false
+          }
+        ],
+        "ok": true,
+        "reasons": []
+      },
+      "changedPaths": [
+        "src/humanize/time.py",
+        "tests/test_time.py"
+      ],
+      "verdict": {
+        "verdict": "reject",
+        "reasons": [
+          "Docstring edit puts the new text inside the unclosed '0 minutes' example, which breaks the mkdocstrings-rendered docs",
+          "Extends 'zero never gains a sign' to any negative value whose output renders as zero, using a fragile scan for digits 1-9 in the output string, which the spec did not ask for",
+          "Unnecessary public-wrapper/private-helper split that repeats _date_and_delta's type checks"
+        ]
+      },
+      "path": "per_pr",
+      "reasons": [
+        "adversarial review raised findings",
+        "Docstring edit puts the new text inside the unclosed '0 minutes' example, which breaks the mkdocstrings-rendered docs",
+        "Extends 'zero never gains a sign' to any negative value whose output renders as zero, using a fragile scan for digits 1-9 in the output string, which the spec did not ask for",
+        "Unnecessary public-wrapper/private-helper split that repeats _date_and_delta's type checks"
+      ]
+    },
+    {
+      "round": 1,
+      "allChecksPass": true,
+      "grading": {
+        "mode": "fail-first",
+        "caseId": null,
+        "patchApplied": false,
+        "baseChecks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 1
+          }
+        ],
+        "checks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 0,
+            "runs": 1,
+            "flaky": false
+          }
+        ],
+        "ok": true,
+        "reasons": []
+      },
+      "changedPaths": [
+        "src/humanize/time.py",
+        "tests/test_time.py"
+      ],
+      "verdict": {
+        "verdict": "reject",
+        "reasons": [
+          "New test lines exceed 88 chars (tests/test_time.py:846-848, 862, 875); E501 is enabled via ruff 'E' and black would reformat, so pre-commit fails",
+          "precisedelta(timedelta(microseconds=-1)) returns '-0 seconds', a rendered zero with a sign, untested against the 'zero never gains a sign' constraint",
+          "Sign derived from clock comparison (date > now) plus a dead datetime guard instead of checking the input's sign directly",
+          "Two commits with the same message, the second partly undoing the first; should be squashed"
+        ]
+      },
+      "path": "per_pr",
+      "reasons": [
+        "adversarial review raised findings",
+        "New test lines exceed 88 chars (tests/test_time.py:846-848, 862, 875); E501 is enabled via ruff 'E' and black would reformat, so pre-commit fails",
+        "precisedelta(timedelta(microseconds=-1)) returns '-0 seconds', a rendered zero with a sign, untested against the 'zero never gains a sign' constraint",
+        "Sign derived from clock comparison (date > now) plus a dead datetime guard instead of checking the input's sign directly",
+        "Two commits with the same message, the second partly undoing the first; should be squashed"
+      ]
+    }
+  ],
+  "loops": {
+    "sessions": [
+      {
+        "sessionId": "106ccedc-2990-4d36-806c-b2ace021df1e",
+        "subtype": "success",
+        "isError": false,
+        "turns": 10,
+        "costUsd": 0.1669084,
+        "denials": 0,
+        "result": "`precisedelta()` now keeps the sign. `precisedelta(timedelta(seconds=-3661))` returns `'-1 hour, 1 minute and 1 second'`. The full suite passes (757 passed, 112 skipped), and so do the docstring examples.\n\n- **Fail first:** against the base `time.py`, the 8 new `test_precisedelta_negative` cases fail, for example `'500 milliseconds' == '-500 milliseconds'`. They pass with the fix.\n- **How it works:** the public function now takes the absolute value of a negative `timedelta` or number and renders that as before. It then adds a leading `-`. The old body moved into a private helper, `_precisedelt",
+        "round": 0,
+        "role": "worker",
+        "exit": 0
+      },
+      {
+        "sessionId": "db45b99c-aef1-4037-b0b9-18f60e450ecd",
+        "subtype": "success",
+        "isError": false,
+        "turns": 5,
+        "costUsd": 0.2224232,
+        "denials": 0,
+        "result": "I recommend rejecting this change. The behaviour is correct and all tests pass (757 passed, 112 skipped), but the docstring edit, which the spec explicitly asked for, breaks the published documentation.\n\n**1. The docstring edit breaks the rendered docs (`src/humanize/time.py:545-555`).** The new text was inserted *before* the closing fence of the existing `'0 minutes'` example, not after it. The docstring now reads:\n\n````\n    >>> precisedelta(delta, minimum_unit=\"minutes\")\n    '0 minutes'\n\n    A negative value keeps its sign, like `str(timedelta)` does:\n\n    ```pycon\n    >>> precisedelta(dt.ti",
+        "round": 0,
+        "role": "reviewer"
+      },
+      {
+        "sessionId": "106ccedc-2990-4d36-806c-b2ace021df1e",
+        "subtype": "success",
+        "isError": false,
+        "turns": 5,
+        "costUsd": 0.26280230000000004,
+        "denials": 0,
+        "result": "I addressed all three findings. The full suite and the docstring examples pass (770 passed, 112 skipped). Against the base `time.py`, the 8 negative-value tests fail, as the fail-first criterion requires.\n\n- **Docstring:** the new negative example was placed inside the existing `'0 minutes'` code block, which left that block unclosed. It now sits in its own `pycon` block after the `'0 minutes'` block has closed.\n- **Helper split:** I removed `_precisedelta` and the type checks I had duplicated. `precisedelta` is a single function again. It calls `_date_and_delta` with a fixed `now`, and treats",
+        "round": 1,
+        "role": "worker",
+        "exit": 0
+      },
+      {
+        "sessionId": "757e2a67-1d39-4b9f-b216-73d2a48c1940",
+        "subtype": "success",
+        "isError": false,
+        "turns": 5,
+        "costUsd": 0.24389099999999997,
+        "denials": 0,
+        "result": "I'd reject this change. The fix works and the checks pass, but the test code it adds would fail the project's own lint and formatting hooks.\n\n**What holds up**\n- The full suite passes in the provided environment: 755 passed, 112 skipped.\n- The fail-first check fails on the base commit and passes on the result.\n- Negative values come out as `-` plus the positive result for the cases I tried, including a plain negative number of seconds and `minimum_unit=\"hours\"` (`'-1.02 hours'`).\n- Positive values and an exact zero are unchanged, and `-0.0` and `timedelta(0)` gain no sign.\n- Only `src/humanize",
+        "round": 1,
+        "role": "reviewer"
+      }
+    ],
+    "finish": [
+      {
+        "at": "2026-10-12T21:19:15Z",
+        "loop": "finish",
+        "result": "pass",
+        "continuation": 0,
+        "checks": 2,
+        "stopHookActive": "false"
+      },
+      {
+        "at": "2026-10-12T21:23:55Z",
+        "loop": "finish",
+        "result": "pass",
+        "continuation": 0,
+        "checks": 2,
+        "stopHookActive": "false"
+      }
+    ],
+    "scopeDenials": [],
+    "retries": 1
+  },
+  "costUsd": 0.8960249,
+  "packEvidenceLines": 39
+}

@@ -1,0 +1,8 @@
+{"at":"2026-10-12T21:16:04Z","loop":"task","event":"start","taskId":"t-01M4RZHVGFWY1FXM7RNXWAVNQA","spec":"0002-bugfix-precisedelta-sign","packId":"pack-d812d07de777"}
+{"at":"2026-10-12T21:19:15Z","loop":"finish","result":"pass","continuation":0,"checks":2,"stopHookActive":"false"}
+{"at":"2026-10-12T21:19:15Z","loop":"session","round":0,"subtype":"success","turns":10,"costUsd":0.1669084}
+{"at":"2026-10-12T21:21:47Z","loop":"check","round":0,"path":"per_pr","allChecksPass":true,"verdict":"reject"}
+{"at":"2026-10-12T21:21:47Z","loop":"retry","round":1,"sessionId":"106ccedc-2990-4d36-806c-b2ace021df1e"}
+{"at":"2026-10-12T21:23:55Z","loop":"finish","result":"pass","continuation":0,"checks":2,"stopHookActive":"false"}
+{"at":"2026-10-12T21:23:55Z","loop":"session","round":1,"subtype":"success","turns":5,"costUsd":0.26280230000000004}
+{"at":"2026-10-12T21:26:09Z","loop":"check","round":1,"path":"per_pr","allChecksPass":true,"verdict":"reject"}

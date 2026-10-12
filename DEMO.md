@@ -24,6 +24,7 @@ and a backlog of small, crisp issues. Every spec below is a real open upstream i
 | Queue loop | `harness/bin/dispatch.sh` | Loop 4: the next approved specs, a forecast before any spend, a cap per wake-up, a timer. |
 | Workbench | `harness/bin/workbench.sh` | One task end to end: worktree, Claude, checks, reviewer, router, packet, PR. |
 | Guardrails | `.claude/workbench/settings.template.json`, `harness/hooks/`, `harness/pack/` | dontAsk mode, deny rules, the native sandbox, a scope hook, a Stop hook, the policy and evidence mods. |
+| Attended settings | `.claude/settings.json` | For a person running Claude Code in the fork: sandbox on, a prompt before any harness or spec edit. Headless runs never load it (`--setting-sources user`). |
 | Guardrail probe | `harness/bin/guardrails.sh` | A live Claude session that tries what the guardrails must stop, scored from evidence, not from Claude's account. |
 | Router | `harness/lib/router.ts` (unchanged from the workbench-sandbox build), `route.ts` | Decides from facts computed outside the session. |
 | Proving loop | `harness/bin/prove.sh` | pass^k over fresh trials; graduation reads it. |
@@ -52,10 +53,13 @@ The four seeded specs:
 5. Browser tabs: the fork's [pull requests](https://github.com/acn-yogi/humanize/pulls), the
    recorded PR (below), and upstream issue
    [#430](https://github.com/python-humanize/humanize/issues/430).
-6. Close or merge any open PR from a rehearsal for spec 0001 so the live one is the only one,
-   and clear `runs/` (`rm -rf runs`) so the dispatcher's forecast shows 0001 as runnable.
+6. Clear `runs/` (`rm -rf runs`) so the dispatcher's forecast shows every approved spec as
+   runnable. Leave PR #1 open: the live PR joins it in batch `docs-2026-10`, so step 6 shows a
+   batch of two approved with one command.
 
-Budget for the whole demo: about $1 (probe about $0.07, one task $0.30 to $0.80).
+Budget for the whole demo: about $1 (probe about $0.07, one task $0.30 to $0.80). The
+recorded runs cost $0.59 (spec 0001), $0.90 (0002) and $0.64 (0004), as Claude Code
+estimates it.
 
 ## The run (10 minutes)
 
@@ -182,6 +186,19 @@ for a person to commit; set `graduated = true` and `auto_merge = true` for the c
 router sends the next docs result down `graduated`, which `publish.sh` merges by policy. Any
 change to the pack changes the pack id, and the class drops back to per batch until it is
 proven again.
+
+### If there is time, or questions: the queue loop, recorded
+
+One real dispatcher wake-up (`demo/recordings/dispatch-wakeup.log`) took the two approved
+specs left in the queue and ran them in parallel, two workbenches at once, while the draft
+spec waited. Both ended at a person, for different reasons:
+
+| PR | Spec | What to point at |
+|---|---|---|
+| [#2](https://github.com/acn-yogi/humanize/pull/2) | 0004, `humanize` CLI | Checks pass, and it still stops for a person: it touches `pyproject.toml`. The reviewer also found real gaps in the CLI's error handling, and caught a flaw in the harness itself: the facts file reported `touchesManifests=false`. The router had recomputed the flag and routed correctly, but the facts were wrong, and that is now fixed (`harness/lib/flags.ts`). The loop improving its own harness, from a reviewer's finding. |
+| [#3](https://github.com/acn-yogi/humanize/pull/3) | 0002, `precisedelta` sign | Fail first held on both rounds: the reproducing check fails on the base (exit 1) and passes on the result (exit 0). The two reviewer rounds disagreed: round 0 objected to an extra "negative zero has no sign" guard, the retry removed it, and round 1 flagged `-0 seconds` as a gap. Reviewers that disagree send the change to a person. That is what per PR is for. |
+
+`harness/bin/replay.sh demo/recordings/t-01M4RZHVGFWY1FXM7RNXWAVNQA` replays the bugfix run.
 
 ## Fallback: if live fails
 

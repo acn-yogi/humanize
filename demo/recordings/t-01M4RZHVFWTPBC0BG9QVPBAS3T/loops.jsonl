@@ -1,0 +1,8 @@
+{"at":"2026-10-12T21:16:04Z","loop":"task","event":"start","taskId":"t-01M4RZHVFWTPBC0BG9QVPBAS3T","spec":"0004-cli-entrypoint","packId":"pack-d812d07de777"}
+{"at":"2026-10-12T21:17:16Z","loop":"finish","result":"pass","continuation":0,"checks":1,"stopHookActive":"false"}
+{"at":"2026-10-12T21:17:16Z","loop":"session","round":0,"subtype":"success","turns":4,"costUsd":0.10006519999999999}
+{"at":"2026-10-12T21:19:29Z","loop":"check","round":0,"path":"per_pr","allChecksPass":true,"verdict":"reject"}
+{"at":"2026-10-12T21:19:29Z","loop":"retry","round":1,"sessionId":"d5ebdbfa-f4ad-4635-85aa-827a49b2bff5"}
+{"at":"2026-10-12T21:20:10Z","loop":"finish","result":"pass","continuation":0,"checks":1,"stopHookActive":"false"}
+{"at":"2026-10-12T21:20:10Z","loop":"session","round":1,"subtype":"success","turns":2,"costUsd":0.1353094}
+{"at":"2026-10-12T21:22:27Z","loop":"check","round":1,"path":"per_pr","allChecksPass":true,"verdict":"reject"}

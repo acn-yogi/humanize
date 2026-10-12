@@ -1,0 +1,41 @@
+{
+  "taskId": "t-01M4RZHVFWTPBC0BG9QVPBAS3T",
+  "changedPaths": [
+    "pyproject.toml",
+    "src/humanize/__main__.py",
+    "src/humanize/cli.py",
+    "tests/test_cli.py"
+  ],
+  "touchesCi": false,
+  "touchesInstructions": false,
+  "touchesManifests": false,
+  "touchesSecurityPaths": false,
+  "touchesLinks": false,
+  "linesChanged": 132,
+  "checks": [
+    {
+      "cmd": "python -m pytest -q -p no:cacheprovider -x",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/cli_entrypoint.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/changed.py tests/test_cli.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    }
+  ],
+  "allChecksPass": true,
+  "resultSha": "31068a11438b0b80efb8c0a398eec088afbf9cc6",
+  "baseSha": "52a0efb50be93f797ba773b407ded39149984420",
+  "grading": null,
+  "resultBundleVersionId": "local-t-01M4RZHVFWTPBC0BG9QVPBAS3T",
+  "resultBundleETag": "\"ccb9a29edb47eae00d43ad3cd1f4621fe74f6e3c5f05135f4272442e01415030\""
+}

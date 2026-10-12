@@ -1,0 +1,161 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index 63817fe..3164909 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -41,6 +41,7 @@ optional-dependencies.tests = [
+   "pytest-codspeed",
+   "pytest-cov",
+ ]
++scripts.humanize = "humanize.cli:main"
+ urls."Issue tracker" = "https://github.com/python-humanize/humanize/issues"
+ urls."Release notes" = "https://github.com/python-humanize/humanize/releases"
+ urls.Documentation = "https://humanize.readthedocs.io/"
+diff --git a/src/humanize/__main__.py b/src/humanize/__main__.py
+new file mode 100644
+index 0000000..1606194
+--- /dev/null
++++ b/src/humanize/__main__.py
+@@ -0,0 +1,10 @@
++"""Allow `python -m humanize`."""
++
++from __future__ import annotations
++
++import sys
++
++from humanize.cli import main
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff --git a/src/humanize/cli.py b/src/humanize/cli.py
+new file mode 100644
+index 0000000..69e52c1
+--- /dev/null
++++ b/src/humanize/cli.py
+@@ -0,0 +1,70 @@
++"""Command-line interface: `humanize` and `python -m humanize`."""
++
++from __future__ import annotations
++
++import argparse
++import math
++import sys
++from collections.abc import Sequence
++
++import humanize
++
++
++def _build_parser() -> argparse.ArgumentParser:
++    parser = argparse.ArgumentParser(
++        prog="humanize", description="Humanize numbers, sizes and durations."
++    )
++    sub = parser.add_subparsers(dest="command", required=True)
++
++    size = sub.add_parser("naturalsize", help="format a number of bytes")
++    size.add_argument("value")
++    size.add_argument("--binary", action="store_true", help="use KiB, MiB, ...")
++    size.add_argument("--gnu", action="store_true", help="use GNU-style suffixes")
++    size.add_argument("--format", default="%.1f", help="printf-style format")
++
++    comma = sub.add_parser("intcomma", help="add thousands separators")
++    comma.add_argument("value")
++
++    word = sub.add_parser("intword", help="express a large number in words")
++    word.add_argument("value")
++
++    delta = sub.add_parser("naturaldelta", help="describe a duration in seconds")
++    delta.add_argument("value", help="number of seconds")
++    return parser
++
++
++def _check_finite(value: str) -> None:
++    """Raise ValueError unless value is a finite number."""
++    try:
++        number = float(value)
++    except ValueError:
++        msg = f"not a number: {value!r}"
++        raise ValueError(msg) from None
++    if not math.isfinite(number):
++        msg = f"not a finite number: {value!r}"
++        raise ValueError(msg)
++
++
++def _run(args: argparse.Namespace) -> str:
++    _check_finite(args.value)
++    if args.command == "naturalsize":
++        return humanize.naturalsize(
++            args.value, binary=args.binary, gnu=args.gnu, format=args.format
++        )
++    if args.command == "intcomma":
++        return humanize.intcomma(args.value)
++    if args.command == "intword":
++        return humanize.intword(args.value)
++    return humanize.naturaldelta(float(args.value))
++
++
++def main(argv: Sequence[str] | None = None) -> int:
++    """Run the command line interface and return the exit status."""
++    args = _build_parser().parse_args(argv)
++    try:
++        result = _run(args)
++    except (ValueError, TypeError, OverflowError) as e:
++        print(f"humanize: error: {e}", file=sys.stderr)
++        return 1
++    print(result)
++    return 0
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+new file mode 100644
+index 0000000..3732759
+--- /dev/null
++++ b/tests/test_cli.py
+@@ -0,0 +1,51 @@
++from __future__ import annotations
++
++import pytest
++
++from humanize.cli import main
++
++
++@pytest.mark.parametrize(
++    ("argv", "expected"),
++    [
++        (["naturalsize", "8589934592"], "8.6 GB\n"),
++        (["naturalsize", "--binary", "8589934592"], "8.0 GiB\n"),
++        (["naturalsize", "--gnu", "8589934592"], "8.0G\n"),
++        (["naturalsize", "--format", "%.3f", "8589934592"], "8.590 GB\n"),
++        (["intcomma", "1234567"], "1,234,567\n"),
++        (["intword", "1200000"], "1.2 million\n"),
++        (["naturaldelta", "3600"], "an hour\n"),
++    ],
++)
++def test_commands(
++    capsys: pytest.CaptureFixture[str], argv: list[str], expected: str
++) -> None:
++    assert main(argv) == 0
++    assert capsys.readouterr().out == expected
++
++
++@pytest.mark.parametrize(
++    "argv",
++    [
++        ["naturalsize", "abc"],
++        ["naturalsize", "nan"],
++        ["intcomma", "abc"],
++        ["intcomma", "inf"],
++        ["intword", "abc"],
++        ["intword", "nan"],
++        ["naturaldelta", "abc"],
++        ["naturaldelta", "inf"],
++        ["naturaldelta", "nan"],
++    ],
++)
++def test_bad_value(capsys: pytest.CaptureFixture[str], argv: list[str]) -> None:
++    assert main(argv) != 0
++    captured = capsys.readouterr()
++    assert captured.out == ""
++    assert captured.err
++
++
++def test_no_command() -> None:
++    with pytest.raises(SystemExit) as exc:
++        main([])
++    assert exc.value.code != 0

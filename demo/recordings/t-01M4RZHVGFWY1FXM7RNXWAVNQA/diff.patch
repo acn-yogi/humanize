@@ -1,0 +1,94 @@
+diff --git a/src/humanize/time.py b/src/humanize/time.py
+index 7c4a28e..0ca893d 100644
+--- a/src/humanize/time.py
++++ b/src/humanize/time.py
+@@ -546,11 +546,24 @@ def precisedelta(
+     >>> precisedelta(delta, minimum_unit="minutes")
+     '0 minutes'
+ 
++    ```
++
++    A negative value keeps its sign, like `str(timedelta)` does:
++
++    ```pycon
++    >>> precisedelta(dt.timedelta(seconds=-3661))
++    '-1 hour, 1 minute and 1 second'
++
+     ```
+     """
+-    date, delta = _date_and_delta(value, precise=True)
++    import datetime as dt
++
++    now = _now()
++    date, delta = _date_and_delta(value, now=now, precise=True)
+     if date is None:
+         return str(value)
++    # `date` is `now - value`, so it lies after `now` only for a negative delta.
++    sign = "-" if date > now and not isinstance(value, dt.datetime) else ""
+ 
+     suppress_set = {Unit[s.upper()] for s in suppress}
+ 
+@@ -675,12 +688,12 @@ def precisedelta(
+             break
+ 
+     if len(texts) == 1:
+-        return texts[0]
++        return sign + texts[0]
+ 
+     head = ", ".join(texts[:-1])
+     tail = texts[-1]
+ 
+-    return _("%s and %s") % (head, tail)
++    return sign + _("%s and %s") % (head, tail)
+ 
+ 
+ def _rounding_by_fmt(format: str, value: float) -> float | int:
+diff --git a/tests/test_time.py b/tests/test_time.py
+index 887a3fc..f3492a8 100644
+--- a/tests/test_time.py
++++ b/tests/test_time.py
+@@ -838,6 +838,44 @@ def test_precisedelta_suppress_units(
+     )
+ 
+ 
++@pytest.mark.parametrize(
++    "val, min_unit, suppress, fmt",
++    [
++        (3661, "seconds", [], "%0.2f"),
++        (dt.timedelta(seconds=3661), "seconds", [], "%0.2f"),
++        (dt.timedelta(days=2, seconds=3633, microseconds=123000), "seconds", [], "%0.2f"),
++        (dt.timedelta(days=2, seconds=3633, microseconds=123000), "seconds", ["days"], "%0.4f"),
++        (dt.timedelta(days=2, seconds=3633, microseconds=123000), "microseconds", [], "%0.2f"),
++        (90.5, "minutes", [], "%0.2f"),
++        (400, "years", [], "%0.2f"),
++        (0.5, "milliseconds", [], "%0.2f"),
++    ],
++)
++def test_precisedelta_negative(
++    val: dt.timedelta | float, min_unit: str, suppress: list[str], fmt: str
++) -> None:
++    positive = humanize.precisedelta(
++        val, minimum_unit=min_unit, suppress=suppress, format=fmt
++    )
++    assert not positive.startswith("-")
++    assert (
++        humanize.precisedelta(-val, minimum_unit=min_unit, suppress=suppress, format=fmt)
++        == "-" + positive
++    )
++
++
++@pytest.mark.parametrize(
++    "val, min_unit",
++    [
++        (0, "seconds"),
++        (-0.0, "seconds"),
++        (dt.timedelta(0), "seconds"),
++    ],
++)
++def test_precisedelta_zero_has_no_sign(val: dt.timedelta | float, min_unit: str) -> None:
++    assert not humanize.precisedelta(val, minimum_unit=min_unit).startswith("-")
++
++
+ def test_precisedelta_bogus_call() -> None:
+     assert humanize.precisedelta(None) == "None"
+ 

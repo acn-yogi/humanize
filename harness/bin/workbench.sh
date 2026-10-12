@@ -231,10 +231,12 @@ evaluate() {  # evaluate <round>: writes facts.json, scope.json, verdict.json, d
     bundle_sha="$(sha256sum "${rdir}/result.bundle" | cut -d' ' -f1)"
   fi
   gw diff "$base_sha" HEAD > "${rdir}/diff.patch"
+  local flags
+  flags="$(node --no-warnings "${T}/harness/lib/flags.ts" <<< "$changed")"
   jq -n --arg t "$task_id" --argjson p "$changed" --argjson n "$lines" --argjson l "$links" --argjson c "$results" \
     --argjson ok "$all_pass" --arg h "$head_sha" --arg b "$base_sha" --arg bs "$bundle_sha" --argjson gr "$grading" \
-    '{taskId: $t, changedPaths: $p, touchesCi: false, touchesInstructions: false, touchesManifests: false,
-      touchesSecurityPaths: false, touchesLinks: $l, linesChanged: $n, checks: $c, allChecksPass: $ok,
+    --argjson fl "$flags" \
+    '{taskId: $t, changedPaths: $p} + $fl + {touchesLinks: $l, linesChanged: $n, checks: $c, allChecksPass: $ok,
       resultSha: $h, baseSha: $b, grading: $gr}
       + (if $bs == "" then {resultBundleVersionId: null, resultBundleETag: null}
          else {resultBundleVersionId: ("local-" + $t), resultBundleETag: ("\"" + $bs + "\"")} end)' > "${rdir}/facts.json"
