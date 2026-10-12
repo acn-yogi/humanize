@@ -228,9 +228,10 @@ Common live failures and the fix:
 
 ## What this demo does not show, honestly
 
-- **No microVM, no gateway.** One machine has no separate kernel and nothing is destroyed
-  after the task. That is why the design runs this unattended only on code we own (this fork)
-  and keeps client code at volume for the microVM workbench.
+- **No microVM, no gateway.** This is the Claude native deployment: no VM, with Claude Code's
+  sandbox, managed settings and the pack as the boundary, and credentials kept out of the
+  session. It runs any code unattended. Where a client provides VMs, the same unit runs inside
+  a microVM per task, which adds its own kernel and host firewall.
 - **The spend cap is an estimate.** `--max-budget-usd` is Claude Code's client-side estimate
   and one response can overshoot it. The hard cap is a Console workspace limit, which a
   borrowed subscription login does not have.
