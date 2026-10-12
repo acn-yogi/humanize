@@ -16,19 +16,21 @@ g() { git -c core.hooksPath=/dev/null -c core.fsmonitor=false -c core.untrackedC
 # harness runs (setup, checks, the Stop hook's checks), and listed in the sandbox's denyRead.
 wb_secrets() {
   local p prof
-  for p in .ssh .aws .config/gcloud .config/gh .config/hub .config/git/credentials .azure .kube .docker .gnupg \
-    .git-credentials .netrc .npmrc .pypirc .claude .local/share/keyrings .terraform.d .vault-token \
-    .cargo/credentials .cargo/credentials.toml .m2/settings.xml .gradle/gradle.properties; do
-    [ -e "${HOME}/${p}" ] && printf '%s\n' "${HOME}/${p}"
-  done
-  # In WSL the Windows profiles are mounted too, with the Windows Claude login and gh token.
-  if grep -qi microsoft /proc/version 2>/dev/null; then
-    for prof in /mnt/*/Users/*/; do
-      for p in .ssh .aws .azure .kube .docker .gnupg .config .claude .git-credentials .netrc .npmrc AppData; do
-        [ -e "${prof%/}/${p}" ] && printf '%s\n' "${prof%/}/${p}"
-      done
+  {
+    for p in .ssh .aws .config/gcloud .config/gh .config/hub .config/git/credentials .azure .kube .docker .gnupg       .git-credentials .netrc .npmrc .pypirc .claude .local/share/keyrings .terraform.d .vault-token       .cargo/credentials .cargo/credentials.toml .m2/settings.xml .gradle/gradle.properties; do
+      [ -e "${HOME}/${p}" ] && realpath -e "${HOME}/${p}"
     done
-  fi
+    # In WSL the Windows profiles are mounted too, with the Windows Claude login and gh token.
+    # Junctions such as "Default User" resolve to a real profile, listed once.
+    if grep -qi microsoft /proc/version 2>/dev/null; then
+      for prof in /mnt/*/Users/*/; do
+        [ -L "${prof%/}" ] && continue
+        for p in .ssh .aws .azure .kube .docker .gnupg .config .claude .git-credentials .netrc .npmrc AppData; do
+          [ -e "${prof%/}/${p}" ] && realpath -e "${prof%/}/${p}"
+        done
+      done
+    fi
+  } 2>/dev/null | sort -u
   return 0
 }
 
