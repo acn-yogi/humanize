@@ -21,7 +21,7 @@ what ran. What each phase means here, and what the demo has to show for it:
 | 0 Assess | Are the repo, pipeline, controls and team ready; a gap report, then onboarding | `demo/assess.md`: 25 of 50, with the gaps that close each phase. The harness was then installed, one piece per commit (step 0 below). The two phase 2 gaps were then closed on the fork (Actions on, a ruleset on `main`, CODEOWNERS) and the fork re-assessed at 32 of 50. |
 | 1 Assisted | People write the spec, Claude writes the code and opens the PR, a person merges | Ran end to end: specs 0001, 0002 and 0004 became PRs #1, #3 and #2, each with its evidence packet, each waiting for a person. |
 | 2 Autonomous by class | Graduated classes merge by policy; only high-value or high-risk PRs reach a person | Routing shown: PR #1 joined the approved docs batch, PR #2 stopped for a person because it touches the package manifest. Graduation (`prove.sh`, pass^k) is built and has not run. |
-| 3 Self-improving | The proving loop plus shaping: a shaping agent turns a documented intent into a plan and specs with fail-first checks; the loop runs to a dark deploy; the feature flag is the human control | Shaping ran once (`harness/bin/shape.sh`, `demo/recordings/shape/`): one intent became a plan and three draft specs whose checks all fail on today's code, for $0.21. Nothing it shaped has run. |
+| 3 Self-improving | The proving loop plus shaping: a shaping agent turns a documented intent into a plan and specs with fail-first checks; the loop runs to a dark deploy; the feature flag is the human control | Shaping ran once (`harness/bin/shape.sh`, `demo/recordings/shape/`): one intent became a plan and three draft specs whose checks all fail on today's code, for $0.21. Nothing it shaped has run. The proving loop ran once end to end (step 9): the audit ranked the reviewer's round-0 rejections first; a broad case and its narrow half were written on spec 0002; both reproduced (0 of 3); one hook change was tried on a branch; the narrow case proved 3 of 3 with every judge verdict earned and shipped (merged to main), the broad one did not (0 of 2) and stays as reproduced, not fixed; $2.95 in all. |
 
 `WORKBENCH_PHASE=1 harness/bin/dispatch.sh --dry-run` shows the same queue under another
 phase without editing anything (`demo/recordings/phase-forecasts.txt` has all four).
@@ -48,6 +48,10 @@ and a backlog of small, crisp issues. Every spec below is a real open upstream i
 | Guardrail probe | `harness/bin/guardrails.sh` | A live Claude session that tries what the guardrails must stop (and a second under the reviewer's settings), scored from evidence, not from Claude's account; `report.json` names the guardrail each row exercises, and Act 0b reads it. |
 | Router | `harness/lib/router.ts` (unchanged from the workbench-sandbox build), `route.ts` | Decides from facts computed outside the session. |
 | Proving loop | `harness/bin/prove.sh` | pass^k over fresh trials; graduation reads it. |
+| Audit (mine) | `harness/bin/audit.sh`, `harness/lib/audit.py` | The proving loop's first step: a reference-free audit over every recorded session, failure classes ranked by how many tasks they recur on, each hit with its file and line; `--promote CODE` drafts a case. No model is asked. |
+| Corrections (record) | `harness/bin/corrections.sh`, `harness/bin/correct.sh` | Human corrections into the ledger: the fork's PR comments on harness PRs, classified (lint, test, scope, wrong-behaviour, style, question, other) and deduplicated; takeovers and hand edits recorded by hand. |
+| Scorecard | `harness/bin/scorecard.sh` | Manual takeovers, human PR comments, PRs with no correction, cost per merged PR, recurrence after a proven fix, pack size. |
+| Case runner and judge | `harness/bin/case-run.sh`, `harness/bin/judge.sh`, `harness/lib/proof.py` | A trajectory case run k times on the current pack and on a candidate pack, scored from the packets and `ruff` on the result; a different model reads both trajectories of every pass with a verbatim quote; the verdict table and the gate. |
 | Batch approval | `harness/bin/approve-batch.sh` | One human approval merges a whole batch of mechanical PRs. |
 
 The four seeded specs:
@@ -459,6 +463,62 @@ comments on upstream.
 `cat demo/recordings/triggers/watch-tickets.txt demo/recordings/triggers/dispatch-pool.txt`
 shows the two consoles.
 
+### 9. The proving loop: the harness fixes itself, with the proof on the table (optional, 3 minutes, no spend to replay)
+
+Phase 3's other half. A harness change ships on a rerun, never on a story: reproduce the
+mistake before you fix it, rerun before you ship the fix, read both trajectories, keep the
+case. The loop ran once, on 13 October 2026, and the record is `demo/recordings/audit/` and
+`demo/recordings/proof/<case>/`. The scripted driver replays it as the second half of Act 5
+(`demo/run-demo.sh --dry-run --acts 5`); by hand it is these commands, none of which spends:
+
+```
+cat demo/recordings/audit/audit.txt                            # 1 mine: failure classes ranked by how many tasks they recur on
+cat harness/cases/lint-in-quick-checks.json harness/cases/lint-on-result.json   # 2 case: the broad one and its narrow half
+cat demo/recordings/proof/lint-on-result/current/trials.txt    # 3 reproduce: k trials on the current pack
+git show --stat 168c9de                                        # 4 fix: the hook change, one commit, three files
+cat demo/recordings/proof/lint-on-result/candidate/trials.txt  # 5 prove: k trials on the candidate pack
+cat demo/recordings/proof/lint-on-result/candidate/t-*/judge.json   # 6 both trajectories: a different model, a verbatim quote
+cat demo/recordings/proof/lint-on-result/verdict.txt           # 7 gate, the narrow case: SHIP
+cat demo/recordings/proof/lint-in-quick-checks/verdict.txt     # 7 gate, the broad case: NO-SHIP
+harness/bin/cases.sh                                           # the regression suite lists both cases with their proof
+```
+
+**The audience sees**, step by step:
+
+| Step | What the record says |
+|---|---|
+| 1 Mine | `harness/bin/audit.sh` over the three live tasks and their twelve sessions, with no model asked: `REVIEW_REJECTED` on 3 of 3 tasks (5 rounds), `LINT_FAILED` on 1 (PR #3: new test lines over 88 chars, ruff E501). No ignored tool error, no unsourced claim, no success claimed against the state. Exit 1. |
+| 2 Case | Two cases on spec 0002 (the bugfix with the lint finding), base `52a0efb`, k=3. The broad one, `lint-in-quick-checks`, asks for the mined class as a whole: ruff clean on the result and the reviewer approving at round 0. Its narrow half, `lint-on-result`, asks only what the fix can answer: ruff clean on the result's changed Python files, the trusted checks passing. The fix under test for both: the Stop hook runs the repository's lint beside the spec's quick checks. |
+| 3 Reproduce | `case-run.sh --pack current`: 0 of 3 conclusive trials passed, for both cases. Every result carried ruff E501 (3, 1 and 1 findings); one was also rejected by the reviewer. Three earlier trials died on a TLS-inspecting proxy and are scored `error`, not `fail`: $0.43 spent on nothing, named as such. |
+| 4 Fix | Branch `harness/lint-in-quick-checks`, one commit, three files: `harness/hooks/stop-checks.sh` runs `[checks] lint` after the quick checks, `harness/config.toml` names `ruff check --no-fix src tests` and installs ruff at the pre-commit pin, `harness/lib/plan.py` carries the list. The hook is in the pack id, so the candidate is a new pack (`pack-7cd23886890b`). The evaluator (`harness/cases`, `cases.sh`) was not touched. |
+| 5 Prove | `case-run.sh --pack candidate`, three conclusive trials on the new pack, ruff clean on every result: the narrow case passes 3 of 3, pass^3 1. The broad case fails 0 of 2: in both of its trials the reviewer rejected round 0 for things lint cannot see (an unclosed docstring fence; a `datetime` regression). A fourth trial was interrupted before its review by the machine, not the harness: its Stop hook had blocked once on lint and then let go, and its result is ruff clean. `cases.sh`: no regression. |
+| 6 Both trajectories | `judge.sh`, opus reading sonnet's work, $0.23 for three: `earned` three times, each with a verbatim quote the harness found in the transcript. Twice the worker ran ruff itself once ruff was in its environment and rewrapped the long lines; once the code was clean from the start. No `noqa`, no configuration touched, no test removed. |
+| 7 Gate | Narrow: before pass^3 0, after pass^3 1, regressions 0, judge earned ×3, **SHIP**: the branch fast-forwarded into `main`, the case is the regression case (`fixedIn`, `provenAt`). Broad: before 0, after 0, **NO-SHIP**: reproduced, not fixed. The case stays with the reviewer's five round-0 rejections listed as the next case candidates; the audit now ranks `REVIEW_REJECTED` above `LINT_FAILED`. |
+
+Spend for the whole loop: $2.95 (reproduce $1.42 including the $0.43 lost to the proxy,
+prove $1.09 plus $0.20 for the interrupted worker, judge $0.23), as Claude Code estimates it.
+
+**Say:** this is the loop refusing to flatter itself. The audit found the class without asking
+a model; the case failed first, so it captured a real mistake; the fix measurably removed the
+lint findings and a different model confirmed nobody gamed the check; and the gate shipped
+exactly what was proven, the narrow case, and refused the broad one, because the reviewer's
+rejections were never only about lint. The honest next move is the broad case's list of
+rejections: each is a candidate for the next fix, and the case stays, so the same mistake
+fails the suite if it comes back.
+
+Then the two commands that feed the loop from people and read the signals back:
+
+```
+harness/bin/corrections.sh --dry-run    # human PR comments on the fork's harness PRs, classified; nothing written
+harness/bin/scorecard.sh                # takeovers 0, human PR comments 0, PRs with no correction 3 of 3, cost per merged PR n/a, recurrence 0 over 1 proven case, pack size
+```
+
+The fork has no human PR comment yet, so the corrections ledger is empty and the scorecard says
+so; `correct.sh` records a takeover or hand edit when one happens. Recurrence now watches the
+proven case: a `lint` correction dated after its `provenAt` would count against it.
+
+**Fallback:** `demo/run-demo.sh --dry-run --acts 5` replays all of it from the recordings.
+
 ### If there is time, or questions: the queue loop, recorded
 
 One real dispatcher wake-up (`demo/recordings/dispatch-wakeup.log`) took the two approved
@@ -501,6 +561,7 @@ Common live failures and the fix:
 | `bubblewrap cannot create namespaces` | user namespaces off | the recorded run; this machine had them on |
 | a step hangs past six minutes | model latency | Ctrl-C (the trap removes the worktree), then the replay |
 | `publish failed` | GitHub or gh auth | the packet and branch are kept locally; show `evidence.md` |
+| `API Error: ... Self-signed certificate detected (SELF_SIGNED_CERT_IN_CHAIN)` in a session's result, a session of 1 turn and $0 | a TLS-inspecting corporate proxy on this network; Windows trusts its CA, the Linux `claude` does not | save the chain once (`openssl s_client -connect api.anthropic.com:443 -showcerts`, the `BEGIN`..`END CERTIFICATE` blocks) to a file outside the repository and `export NODE_EXTRA_CA_CERTS=that file` before any harness command; `case-run.sh` scores such a trial `error`, never `fail` |
 
 ## What this demo does not show, honestly
 
@@ -529,6 +590,14 @@ Common live failures and the fix:
   is the person's; the model token and the GitHub token are hidden, as the probe shows.
 - **Graduation is shown, not run.** No class here has a pass^k record yet; proving one costs
   k full runs.
+- **One proof shipped, one did not, and both are on the table.** The proving loop ran end to
+  end once (step 9). The narrow case (ruff clean on the result) reproduced, the hook fix cleared
+  it 3 of 3 with every judge verdict earned, and it merged. The broad case (the reviewer also
+  approving at round 0) reproduced and the same fix did not clear it, because the reviewer
+  kept finding things lint cannot see; it stays as reproduced, not fixed, with those findings
+  listed as the next candidates. Three reproduce trials were lost to a network proxy and are
+  scored `error`, not `fail`; one candidate trial was interrupted before its review and is
+  named, not counted. All of it is in `demo/recordings/proof/`.
 - **Phase 3 is shaping only.** The shaped specs have not run through a workbench, nothing
   has been dark-deployed, and a library has no flag service: `demo/assess.md` says what
   stands in for one. The phase setting changes routing and forecasts; it does not switch
@@ -560,7 +629,7 @@ demo/run-demo.sh --reset                                         # close the dem
 | 2 The batch of twenty | `demo/lib/batch_plan.py` plans a mechanical docs batch from what fails today (`docstring_sections.py` on every public function, `docs_module_page.py` on every module page; 15 items on this fork, one held back), one human yes writes the batch row in `classes.toml`, `workbench.sh` 4 at a time, `approve-batch.sh --merge` | `batch.planned`, `batch.approved`, `workbench.started`, `workbench.checksPassed`, `reviewer.verdict`, `router.decision`, `pr.opened`, `pr.mergedByPolicy` or `pr.held` | about $0.5 per spec |
 | 3 The trap | `demo/trap/INSTRUCTIONS.md` planted with four injected instructions (push upstream, read `~/.ssh`, add a dependency, POST a decoy token), a spec that must read it, the evidence read back from the transcript, the hooks' log, the scope check, the reviewer and the packet | `trap.planted`, `trap.attempted`, `trap.denied` (per layer), `trap.evidence` | one task |
 | 4 Autonomy earned | `prove.sh --k 3 --record` on the held-back docs spec, graduation committed, the same spec run for real and merged by policy, then a packaging spec that stops for a person | `proof.run`, `class.graduated`, `pr.mergedByPolicy`, `pr.stoppedForPerson` | about 5 tasks |
-| 5 The harness fixes itself | replayed from the real PR #2 record: the reviewer's finding, `harness/cases/manifest-flag.json`, the `flags.ts` commit, `harness/bin/cases.sh` | `harness.bugFound`, `harness.caseRecorded`, `harness.fixShipped`, `harness.casePasses` | none |
+| 5 The harness fixes itself | replayed from real records: the reviewer's finding on PR #2, `harness/cases/manifest-flag.json`, the `flags.ts` commit, `harness/bin/cases.sh`; then the proving loop from `demo/recordings/audit/` and `demo/recordings/proof/` (step 9): the audit's top class, the case, the reproduce table, the fix, the prove table with the judge's verdicts, the gate | `harness.bugFound`, `harness.caseRecorded`, `harness.fixShipped`, `harness.casePasses`, `prove.mined`, `prove.case`, `prove.reproduced`, `prove.fixed`, `prove.proven`, `prove.gate` | none |
 | 6 Ready to release | `harness/lib/verdict.py`: hard gates over the merged changes (packet, checks, scope, review, route) and the fork's CI | `verdict.ready` or `verdict.notReady`, `verdict.handedOff` | none |
 | 7 Triggers | the `[triggers]` block as configured, `watch-tickets.sh --dry-run` against the fork (which issues would start work and why), the schedule entries with their next fire times, `dispatch.sh --dry-run --pool-usd 1` for the pool arithmetic | `trigger.configured`, `trigger.ticket.matched`, `trigger.schedule.due`, `trigger.budget.exhausted` | none (nothing runs; the recording is `demo/recordings/triggers/act7.json`) |
 
@@ -593,6 +662,16 @@ harness/bin/prove.sh specs/0001-docs-local-testing.md --k 3       # pass^3
 WORKBENCH_PHASE=1 harness/bin/dispatch.sh --dry-run               # the queue under phase 1
 WORKBENCH_PHASE=3 harness/bin/shape.sh intents/0001-naturalday-weekdays.md   # shape an intent
 harness/bin/intake.sh specs/0005-*.md specs/0006-*.md specs/0007-*.md       # the intake check, no spend
+harness/bin/audit.sh                         # the mine step: failure classes over every recorded session, no spend
+harness/bin/audit.sh --promote REVIEW_REJECTED                    # a case draft under harness/cases/drafts/
+harness/bin/corrections.sh --dry-run         # human PR comments on the fork's harness PRs, classified, nothing written
+harness/bin/correct.sh t-<id> --action takeover --reason lint     # a correction made outside GitHub
+harness/bin/scorecard.sh                     # takeovers, comments, uncorrected PRs, cost per merged PR, recurrence, pack size
+harness/bin/case-run.sh harness/cases/lint-in-quick-checks.json --pack current --k 3      # reproduce: k trials, about $0.35 each
+harness/bin/case-run.sh harness/cases/lint-in-quick-checks.json --pack candidate --k 3    # prove: k trials on the fix branch
+harness/bin/judge.sh runs/proofs/lint-in-quick-checks/candidate/t-<id>      # both trajectories, a different model, about $0.10
+python3 harness/lib/proof.py . lint-in-quick-checks --cases-output <cases.sh output> --write-case --record   # the verdict table
+harness/bin/cases.sh                         # the regression suite: flags cases re-run, trajectory cases listed with their proof
 ```
 
 Run output goes to `runs/` (git-ignored): one folder per task and one line per task in
