@@ -1,7 +1,7 @@
 # The harness and the demo material live beside the library and carry their own checks
 # (harness/checks/, the stop hook, the re-run in a fresh clone). The library's lint covers
 # the library.
-exclude: ^(harness|demo|specs|intents|\.claude)/|^DEMO\.md$
+exclude: ^(harness|demo|specs|intents|plans|\.claude)/|^DEMO\.md$
 
 priorities:
   fix: 0
