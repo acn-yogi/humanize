@@ -311,9 +311,17 @@ the bypass. Ownership is encoded; a second reviewer does not exist.
 
 Closes it: a second maintainer, or a reviewing bot, on the sensitive paths.
 
-### The merge path, tested
+### The merge path, checked
 
-The commit that added this section went to `main` through the new gate with the harness's
-command exactly as `publish.sh` and `approve-batch.sh` run it: `gh pr merge <url> --repo
-acn-yogi/humanize --squash --delete-branch`, the owner's token, no review, required checks
-not yet reported. The PR number, the outcome and the merge commit are in `DEMO.md` step 0.
+Two facts, both read-only. `gh ruleset view 24964704 -R acn-yogi/humanize`, run with the
+owner's token, prints `You can bypass: always`: GitHub's own statement that this token is the
+rule's bypass actor. And `gh pr view 4 --json mergeStateStatus` says `BLOCKED`, which is the
+rule as seen by anyone without the bypass.
+
+The live confirmation is PR #4, the PR that carries this section. It was opened under the
+rule and left open for the owner: merging a PR that has no review is a step a person takes,
+not an assistant, so the assistant that prepared this section stopped there. `DEMO.md` step 0
+has the one command, which is the harness's own merge line from `publish.sh` and
+`approve-batch.sh`. If it succeeds, the bypass is confirmed end to end and the harness
+scripts need no change. If GitHub refuses it, the fix is the `--admin` flag on those two
+lines, and this section should then say so.

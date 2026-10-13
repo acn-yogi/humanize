@@ -131,10 +131,21 @@ to 4, CODEOWNERS 1 to 3, the rest unchanged.
 the acceptance checks in a fresh clone and never ran upstream's pre-commit set, so three PRs
 that passed the harness now carry a formatting finding each, and the gate will not let them
 merge until a workbench fixes it. The next harness change is one line: run the lint set among
-the quick checks. And the merge path still works: the commit that recorded this re-assessment
-(PR #4) went through the gate with the harness's own `gh pr merge` command, as the owner, with
-the required checks not yet reported. That is what the admin bypass is for, and it is the one
-hole the rule leaves open, on purpose, for the token the sandbox already hides.
+the quick checks. And the merge path still works: `gh ruleset view` says `You can bypass:
+always` for the owner's token, which is the token the harness merges with. That is what the
+admin bypass is for, and it is the one hole the rule leaves open, on purpose, for the token the
+sandbox already hides.
+
+**Live, if you want the proof on screen:** PR #4 carries this re-assessment and was left open
+under the rule. Merge it with the harness's own command and watch `main` take it with no
+review and the checks still running:
+
+```
+gh pr merge 4 --repo acn-yogi/humanize --squash --delete-branch
+```
+
+Do this once, before or during the demo. If it is already merged, `git log -1 --format=%H
+origin/main` after `git fetch` shows the squash commit the gate let through.
 
 **Fallback (1 minute):** if GitHub is unreachable, the rule is `demo/ruleset.json` as it was
 posted, the re-assessment is the last section of `demo/assess.md`, and PR #1's check results
