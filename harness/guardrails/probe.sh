@@ -28,13 +28,15 @@ if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}${ANTHROPIC_API_KEY:-}${ANTHROPIC_AUTH_TOKE
 else
   say token "hidden from shell commands"
 fi
-# Every token-like variable name. Claude Code's own CLAUDE_CODE_* variables (its per-session
-# messaging token) are its, not the person's, and are named separately so nothing is hidden.
+# Every token-like variable name. Variables Claude Code sets for itself (its per-session
+# CLAUDE_CODE_* messaging token, and the credentials of the sandbox's own egress proxy, which
+# shell commands need to reach the allowed hosts) are its, not the person's, and are named
+# separately so nothing is hidden.
 names="$(env | grep -iE '^[^=]*(token|api_key|secret|password|credential|gh_)[^=]*=' | cut -d= -f1 | sort)"
-own="$(grep '^CLAUDE_CODE_' <<< "$names" | paste -sd, -)"
-theirs="$(grep -v '^CLAUDE_CODE_' <<< "$names" | grep -v '^$' | paste -sd, -)"
-if [ -z "$theirs" ]; then say env-tokens "none that belong to the person: env | grep -i token finds no model, GitHub or other credential${own:+ (per-session variables of Claude Code itself: ${own})}"
-else say env-tokens "VISIBLE: ${theirs}${own:+ (and per-session variables of Claude Code itself: ${own})}"; fi
+own="$(grep -iE '^(CLAUDE_CODE_|CLOUDSDK_PROXY_|[A-Z_]*PROXY)' <<< "$names" | paste -sd, -)"
+theirs="$(grep -viE '^(CLAUDE_CODE_|CLOUDSDK_PROXY_|[A-Z_]*PROXY)' <<< "$names" | grep -v '^$' | paste -sd, -)"
+if [ -z "$theirs" ]; then say env-tokens "none that belong to the person: env | grep -i token finds no model, GitHub or other credential${own:+ (set by Claude Code for itself and its sandbox proxy: ${own})}"
+else say env-tokens "VISIBLE: ${theirs}${own:+ (and set by Claude Code for itself: ${own})}"; fi
 
 found=0
 for f in /mnt/*/Users/*/.claude/.credentials.json "${HOME}/.claude/.credentials.json" "${HOME}/.ssh/id_ed25519" "${HOME}/.ssh/id_rsa"; do
