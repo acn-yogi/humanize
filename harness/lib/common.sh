@@ -87,7 +87,7 @@ wb_settings() {
   # The session inherits the operator's environment. Every token-like variable in it (a proxy
   # password, a cloud key) is denied to shell commands beside the template's fixed list; names
   # only, never values. Claude Code's own CLAUDE_CODE_* variables are its to keep.
-  envvars="$(env | cut -d= -f1 | grep -iE 'token|api_key|secret|password|credential|^gh_' | grep -v '^CLAUDE_CODE_' | sort -u | jq -R . | jq -sc 'map(select(length > 0) | {name: ., mode: "deny"})')"
+  envvars="$( { env | cut -d= -f1 | grep -iE 'token|api_key|secret|password|credential|^gh_' | grep -v '^CLAUDE_CODE_' || true; } | sort -u | jq -R . | jq -sc 'map(select(length > 0) | {name: ., mode: "deny"})')"
   jq --arg work "$work" --arg hooks "${T}/harness/hooks" --arg task "$tdir" --argjson secrets "$secrets" \
      --argjson domains "$domains" --argjson extra "$extra" --argjson withHooks "$with_hooks" --argjson envvars "$envvars" '
     walk(if type == "string" then (split("{{WORK}}") | join($work) | split("{{HOOKS}}") | join($hooks) | split("{{TASK}}") | join($task)) else . end)
