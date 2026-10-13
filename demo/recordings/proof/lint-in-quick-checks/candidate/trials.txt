@@ -1,0 +1,6 @@
+case lint-in-quick-checks, pack candidate (base harness/lint-in-quick-checks), spec 0002-bugfix-precisedelta-sign, ruff 0.16.10
+trial  task                         outcome  checks  reviewer0  ruff         blocks cost    why
+1      t-01M4TZ5F1GKE6SRTHPBY5DF95P fail     pass    reject     pass         0      $0.36   reviewer: reject at round 0
+2      t-01M4TZJDRA1FCY5TR4TSWRQ6BT fail     pass    reject     pass         0      $0.33   reviewer: reject at round 0
+pass^k: 0 (0 of 2 conclusive trial(s) passed), $0.7 in all
+interrupted: t-01M4TZZ29RYVMV2CSJBR84CN8X (no packet; worker spend $0.2)

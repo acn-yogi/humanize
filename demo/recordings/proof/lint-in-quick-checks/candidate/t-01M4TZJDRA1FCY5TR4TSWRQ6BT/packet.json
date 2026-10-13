@@ -1,0 +1,206 @@
+{
+  "v": 1,
+  "taskId": "t-01M4TZJDRA1FCY5TR4TSWRQ6BT",
+  "trial": 2,
+  "spec": {
+    "id": "0002-bugfix-precisedelta-sign",
+    "title": "precisedelta() keeps the sign of a negative timedelta",
+    "issue": "python-humanize/humanize#379",
+    "class": "bugfix",
+    "approvedBy": "yogi.aradhye",
+    "scope": [
+      "src/humanize/time.py",
+      "tests/test_time.py"
+    ]
+  },
+  "placement": "one machine: git worktree, native sandbox (bubblewrap), no microVM",
+  "claudeCodeVersion": "2.1.296 (Claude Code)",
+  "packId": "pack-7cd23886890b",
+  "models": {
+    "worker": "sonnet",
+    "reviewer": "opus",
+    "shaper": "sonnet"
+  },
+  "caps": {
+    "max_turns": 40,
+    "max_budget_usd": 3.0,
+    "continuations": 3,
+    "retries": 0,
+    "tasks_per_queue_run": 3,
+    "parallel": 2,
+    "time_limit_sec": 1500,
+    "review_max_turns": 25,
+    "review_max_budget_usd": 1.0
+  },
+  "startedAt": "2026-10-13T15:54:59Z",
+  "endedAt": "2026-10-13T16:01:09Z",
+  "baseBranch": "harness/lint-in-quick-checks",
+  "baseCommit": "168c9deea626bba79aba4e06dddd3763234644e6",
+  "headCommit": "f37849165a6f4e99ec53fb9097f08933e1bd5b8c",
+  "changedPaths": [
+    "src/humanize/time.py",
+    "tests/test_time.py"
+  ],
+  "linesChanged": 50,
+  "checks": [
+    {
+      "cmd": "python -m pytest -q -p no:cacheprovider -x",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/precisedelta_sign.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/changed.py tests/test_time.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    }
+  ],
+  "allChecksPass": true,
+  "grading": {
+    "mode": "fail-first",
+    "caseId": null,
+    "patchApplied": false,
+    "baseChecks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 1
+      }
+    ],
+    "checks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 0,
+        "runs": 1,
+        "flaky": false
+      }
+    ],
+    "ok": true,
+    "reasons": []
+  },
+  "scope": {
+    "harness": [],
+    "outside": []
+  },
+  "review": {
+    "verdict": "reject",
+    "reasons": [
+      "Regression: precisedelta(datetime) now raises TypeError (worked on base, returned '1 hour')",
+      "Sub-unit negative values render as signed zero, e.g. '-0 seconds' / '-0 minutes'",
+      "Tests lack datetime and round-to-zero negative cases, so the regression went unnoticed",
+      "Sign check is fragile and redundant with _date_and_delta; uses a redundant local import"
+    ]
+  },
+  "decision": {
+    "taskId": "t-01M4TZJDRA1FCY5TR4TSWRQ6BT",
+    "spec": "0002-bugfix-precisedelta-sign",
+    "className": "bugfix",
+    "path": "per_pr",
+    "reasons": [
+      "adversarial review raised findings",
+      "Regression: precisedelta(datetime) now raises TypeError (worked on base, returned '1 hour')",
+      "Sub-unit negative values render as signed zero, e.g. '-0 seconds' / '-0 minutes'",
+      "Tests lack datetime and round-to-zero negative cases, so the regression went unnoticed",
+      "Sign check is fragile and redundant with _date_and_delta; uses a redundant local import"
+    ],
+    "phase": 2,
+    "packId": "pack-7cd23886890b",
+    "next": "A person reviews this PR.",
+    "at": "2026-10-13T16:01:08.691Z"
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "allChecksPass": true,
+      "grading": {
+        "mode": "fail-first",
+        "caseId": null,
+        "patchApplied": false,
+        "baseChecks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 1
+          }
+        ],
+        "checks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 0,
+            "runs": 1,
+            "flaky": false
+          }
+        ],
+        "ok": true,
+        "reasons": []
+      },
+      "changedPaths": [
+        "src/humanize/time.py",
+        "tests/test_time.py"
+      ],
+      "verdict": {
+        "verdict": "reject",
+        "reasons": [
+          "Regression: precisedelta(datetime) now raises TypeError (worked on base, returned '1 hour')",
+          "Sub-unit negative values render as signed zero, e.g. '-0 seconds' / '-0 minutes'",
+          "Tests lack datetime and round-to-zero negative cases, so the regression went unnoticed",
+          "Sign check is fragile and redundant with _date_and_delta; uses a redundant local import"
+        ]
+      },
+      "path": "per_pr",
+      "reasons": [
+        "adversarial review raised findings",
+        "Regression: precisedelta(datetime) now raises TypeError (worked on base, returned '1 hour')",
+        "Sub-unit negative values render as signed zero, e.g. '-0 seconds' / '-0 minutes'",
+        "Tests lack datetime and round-to-zero negative cases, so the regression went unnoticed",
+        "Sign check is fragile and redundant with _date_and_delta; uses a redundant local import"
+      ]
+    }
+  ],
+  "loops": {
+    "sessions": [
+      {
+        "sessionId": "7d325a33-9779-4705-9231-5cfd815aa5c1",
+        "subtype": "success",
+        "isError": false,
+        "turns": 7,
+        "costUsd": 0.1239686,
+        "denials": 0,
+        "result": "`precisedelta()` now keeps the sign of a negative value, so `precisedelta(timedelta(seconds=-3661))` returns `'-1 hour, 1 minute and 1 second'`. The full suite passes (757 passed, 112 skipped), and `ruff check` is clean. I never ran the new tests against the base commit, so I haven't confirmed they fail without the fix.\n\n- **The fix:** in `src/humanize/time.py`, `precisedelta()` reads the sign from the original value, whether a `timedelta` or a number of seconds. It puts a `-` in front of the result. The rule applies for any `minimum_unit`, `suppress` and `format`. Zero and positive values ren",
+        "round": 0,
+        "role": "worker",
+        "exit": 0
+      },
+      {
+        "sessionId": "5f62c4b5-e065-4add-98cc-b9f55015cf29",
+        "subtype": "success",
+        "isError": false,
+        "turns": 6,
+        "costUsd": 0.20985059999999997,
+        "denials": 0,
+        "result": "I recommend rejecting this change. All 757 tests pass, but the change breaks input that worked before and adds behaviour the spec did not ask for.\n\n1. **It breaks `datetime` input.** The new sign check (`seconds = value.total_seconds() if isinstance(value, dt.timedelta) else value`, then `seconds < 0`) assumes anything that isn't a `timedelta` is a number. `precisedelta()` has always accepted a `datetime`, because `_date_and_delta()` handles that case. On the base commit, `precisedelta(datetime.now() - timedelta(hours=1))` returns `'1 hour'`. On this change it raises `TypeError: '<' not suppor",
+        "round": 0,
+        "role": "reviewer"
+      }
+    ],
+    "finish": [
+      {
+        "at": "2026-10-13T15:57:16Z",
+        "loop": "finish",
+        "result": "pass",
+        "continuation": 0,
+        "checks": 3,
+        "stopHookActive": "false"
+      }
+    ],
+    "scopeDenials": [],
+    "retries": 0
+  },
+  "costUsd": 0.3338192,
+  "packEvidenceLines": 45
+}

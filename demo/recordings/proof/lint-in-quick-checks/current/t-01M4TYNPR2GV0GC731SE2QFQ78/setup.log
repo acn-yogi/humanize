@@ -1,0 +1,2 @@
+### setup: uv venv -q --python python3 {venv}
+### setup: uv pip install -q -p {venv} -e '{src}[tests]'

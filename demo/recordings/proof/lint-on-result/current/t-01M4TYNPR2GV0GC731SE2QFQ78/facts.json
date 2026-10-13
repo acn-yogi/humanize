@@ -1,0 +1,59 @@
+{
+  "taskId": "t-01M4TYNPR2GV0GC731SE2QFQ78",
+  "changedPaths": [
+    "src/humanize/time.py",
+    "tests/test_time.py"
+  ],
+  "touchesCi": false,
+  "touchesInstructions": false,
+  "touchesManifests": false,
+  "touchesSecurityPaths": false,
+  "touchesLinks": false,
+  "linesChanged": 40,
+  "checks": [
+    {
+      "cmd": "python -m pytest -q -p no:cacheprovider -x",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/precisedelta_sign.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/changed.py tests/test_time.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    }
+  ],
+  "allChecksPass": true,
+  "resultSha": "a12d1a92e688eb0761c4ce3ccff7d36863ceb91e",
+  "baseSha": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+  "grading": {
+    "mode": "fail-first",
+    "caseId": null,
+    "patchApplied": false,
+    "baseChecks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 1
+      }
+    ],
+    "checks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 0,
+        "runs": 1,
+        "flaky": false
+      }
+    ],
+    "ok": true,
+    "reasons": []
+  },
+  "resultBundleVersionId": "local-t-01M4TYNPR2GV0GC731SE2QFQ78",
+  "resultBundleETag": "\"18cc552403a8dc6cc5fe980c295c805ee680350de0053447186954d827ee187b\""
+}

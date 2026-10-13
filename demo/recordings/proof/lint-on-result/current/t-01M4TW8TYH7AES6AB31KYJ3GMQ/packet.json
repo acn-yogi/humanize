@@ -1,0 +1,194 @@
+{
+  "v": 1,
+  "taskId": "t-01M4TW8TYH7AES6AB31KYJ3GMQ",
+  "trial": 1,
+  "spec": {
+    "id": "0002-bugfix-precisedelta-sign",
+    "title": "precisedelta() keeps the sign of a negative timedelta",
+    "issue": "python-humanize/humanize#379",
+    "class": "bugfix",
+    "approvedBy": "yogi.aradhye",
+    "scope": [
+      "src/humanize/time.py",
+      "tests/test_time.py"
+    ]
+  },
+  "placement": "one machine: git worktree, native sandbox (bubblewrap), no microVM",
+  "claudeCodeVersion": "2.1.296 (Claude Code)",
+  "packId": "pack-d812d07de777",
+  "models": {
+    "worker": "sonnet",
+    "reviewer": "opus",
+    "shaper": "sonnet"
+  },
+  "caps": {
+    "max_turns": 40,
+    "max_budget_usd": 3.0,
+    "continuations": 3,
+    "retries": 0,
+    "tasks_per_queue_run": 3,
+    "parallel": 2,
+    "time_limit_sec": 1500,
+    "review_max_turns": 25,
+    "review_max_budget_usd": 1.0
+  },
+  "startedAt": "2026-10-13T14:57:24Z",
+  "endedAt": "2026-10-13T15:07:09Z",
+  "baseBranch": "main",
+  "baseCommit": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+  "headCommit": "851e3d98fa0127eba0bfb7f88fbe5ab743903b24",
+  "changedPaths": [
+    "src/humanize/time.py",
+    "tests/test_time.py"
+  ],
+  "linesChanged": 57,
+  "checks": [
+    {
+      "cmd": "python -m pytest -q -p no:cacheprovider -x",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/precisedelta_sign.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/changed.py tests/test_time.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    }
+  ],
+  "allChecksPass": true,
+  "grading": {
+    "mode": "fail-first",
+    "caseId": null,
+    "patchApplied": false,
+    "baseChecks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 1
+      }
+    ],
+    "checks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 0,
+        "runs": 1,
+        "flaky": false
+      }
+    ],
+    "ok": true,
+    "reasons": []
+  },
+  "scope": {
+    "harness": [],
+    "outside": []
+  },
+  "review": {
+    "verdict": "reject",
+    "reasons": [
+      "the reviewer gave no parsable verdict"
+    ]
+  },
+  "decision": {
+    "taskId": "t-01M4TW8TYH7AES6AB31KYJ3GMQ",
+    "spec": "0002-bugfix-precisedelta-sign",
+    "className": "bugfix",
+    "path": "per_pr",
+    "reasons": [
+      "adversarial review raised findings",
+      "the reviewer gave no parsable verdict"
+    ],
+    "phase": 2,
+    "packId": "pack-d812d07de777",
+    "next": "A person reviews this PR.",
+    "at": "2026-10-13T15:07:09.488Z"
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "allChecksPass": true,
+      "grading": {
+        "mode": "fail-first",
+        "caseId": null,
+        "patchApplied": false,
+        "baseChecks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 1
+          }
+        ],
+        "checks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 0,
+            "runs": 1,
+            "flaky": false
+          }
+        ],
+        "ok": true,
+        "reasons": []
+      },
+      "changedPaths": [
+        "src/humanize/time.py",
+        "tests/test_time.py"
+      ],
+      "verdict": {
+        "verdict": "reject",
+        "reasons": [
+          "the reviewer gave no parsable verdict"
+        ]
+      },
+      "path": "per_pr",
+      "reasons": [
+        "adversarial review raised findings",
+        "the reviewer gave no parsable verdict"
+      ]
+    }
+  ],
+  "loops": {
+    "sessions": [
+      {
+        "sessionId": "ca0ad55f-72ec-4d8e-8553-fd0ada5c5cf9",
+        "subtype": "success",
+        "isError": false,
+        "turns": 10,
+        "costUsd": 0.173399,
+        "denials": 0,
+        "result": "`precisedelta()` now keeps the sign of a negative value. `precisedelta(timedelta(seconds=-3661))` returns `'-1 hour, 1 minute and 1 second'`. With the doctests and the full suite, 771 tests pass and 112 are skipped. I didn't run the new test against the base commit, but it can't pass there because the old code never emits a minus sign.\n\nThe change is in `src/humanize/time.py`:\n- **Sign detection:** The sign comes from the original `timedelta` or number, since `_date_and_delta` strips it. The rest of the function runs on the absolute value as before.\n- **Zero:** A negative value that renders as",
+        "round": 0,
+        "role": "worker",
+        "exit": 0
+      },
+      {
+        "sessionId": "8f1c2b93-8cf0-48c5-a469-b00896d830f8",
+        "subtype": "success",
+        "isError": true,
+        "turns": 5,
+        "costUsd": 0.2535828,
+        "denials": 0,
+        "result": "API Error: Unable to connect to API: Self-signed certificate detected (SELF_SIGNED_CERT_IN_CHAIN). The certificate comes from an authority Claude Code doesn't trust, usually a TLS-inspecting corporate proxy or a gateway signed by a private CA: set NODE_EXTRA_CA_CERTS to that CA bundle, or add it to the system certificate store · see https://code.claude.com/docs/en/network-config",
+        "round": 0,
+        "role": "reviewer"
+      }
+    ],
+    "finish": [
+      {
+        "at": "2026-10-13T15:00:47Z",
+        "loop": "finish",
+        "result": "pass",
+        "continuation": 0,
+        "checks": 2,
+        "stopHookActive": "false"
+      }
+    ],
+    "scopeDenials": [],
+    "retries": 0
+  },
+  "costUsd": 0.42698179999999997,
+  "packEvidenceLines": 39
+}

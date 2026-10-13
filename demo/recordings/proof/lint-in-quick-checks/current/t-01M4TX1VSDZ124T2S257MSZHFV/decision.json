@@ -1,0 +1,13 @@
+{
+  "taskId": "t-01M4TX1VSDZ124T2S257MSZHFV",
+  "spec": "0002-bugfix-precisedelta-sign",
+  "className": "bugfix",
+  "path": "reject",
+  "reasons": [
+    "no changes"
+  ],
+  "phase": 2,
+  "packId": "pack-d812d07de777",
+  "next": "Halted with the reasons above. No PR.",
+  "at": "2026-10-13T15:13:30.438Z"
+}

@@ -1,0 +1,58 @@
+{
+  "taskId": "t-01M4TX1VSDZ124T2S257MSZHFV",
+  "changedPaths": [],
+  "touchesCi": false,
+  "touchesInstructions": false,
+  "touchesManifests": false,
+  "touchesSecurityPaths": false,
+  "touchesLinks": false,
+  "linesChanged": 0,
+  "checks": [
+    {
+      "cmd": "python -m pytest -q -p no:cacheprovider -x",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/precisedelta_sign.py",
+      "exit": 1,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/changed.py tests/test_time.py",
+      "exit": 1,
+      "runs": 1,
+      "flaky": false
+    }
+  ],
+  "allChecksPass": false,
+  "resultSha": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+  "baseSha": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+  "grading": {
+    "mode": "fail-first",
+    "caseId": null,
+    "patchApplied": false,
+    "baseChecks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 1
+      }
+    ],
+    "checks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 1,
+        "runs": 1,
+        "flaky": false
+      }
+    ],
+    "ok": false,
+    "reasons": [
+      "fail-first: python {harness}/checks/precisedelta_sign.py fails on the result"
+    ]
+  },
+  "resultBundleVersionId": null,
+  "resultBundleETag": null
+}

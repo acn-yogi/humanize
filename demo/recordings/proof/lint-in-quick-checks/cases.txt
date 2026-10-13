@@ -1,0 +1,3 @@
+PASS  ci-and-instructions      touchesCi, touchesInstructions on .github/workflows/test.yml, .github/CODEOWNERS, CLAUDE.md, docs/index.md
+NOTE  lint-in-quick-checks     trajectory case, no proof yet (status reproduced): harness/bin/case-run.sh harness/cases/lint-in-quick-checks.json --pack current|candidate --k 3
+PASS  manifest-flag            touchesManifests on pyproject.toml, src/humanize/__main__.py, src/humanize/cli.py, tests/test_cli.py

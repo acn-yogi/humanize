@@ -1,0 +1,13 @@
+{
+  "taskId": "t-01M4V20E6J98PKX19765RV6E5G",
+  "spec": "0002-bugfix-precisedelta-sign",
+  "className": "bugfix",
+  "path": "per_pr",
+  "reasons": [
+    "class bugfix is approved per PR (harness/classes.toml)"
+  ],
+  "phase": 2,
+  "packId": "pack-7cd23886890b",
+  "next": "A person reviews this PR.",
+  "at": "2026-10-13T16:45:58.306Z"
+}

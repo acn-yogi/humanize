@@ -1,0 +1,17 @@
+{
+  "taskId": "t-01M4TY8K7YH6A2DE6R8ZGDXG1A",
+  "spec": "0002-bugfix-precisedelta-sign",
+  "className": "bugfix",
+  "path": "per_pr",
+  "reasons": [
+    "adversarial review raised findings",
+    "Regression: precisedelta(datetime) now raises TypeError (value < 0 on a datetime); on base it returned '1 hour'",
+    "Zero is detected by scanning the translated output for digits instead of using the computed values",
+    "test_precisedelta_zero_has_no_sign has an assert that ignores its parameter, so zero coverage is weaker than it looks",
+    "No test covers the datetime input path the change broke"
+  ],
+  "phase": 2,
+  "packId": "pack-d812d07de777",
+  "next": "A person reviews this PR.",
+  "at": "2026-10-13T15:38:35.277Z"
+}

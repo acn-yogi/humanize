@@ -1,0 +1,160 @@
+{
+  "v": 1,
+  "taskId": "t-01M4TX1VSDZ124T2S257MSZHFV",
+  "trial": 3,
+  "spec": {
+    "id": "0002-bugfix-precisedelta-sign",
+    "title": "precisedelta() keeps the sign of a negative timedelta",
+    "issue": "python-humanize/humanize#379",
+    "class": "bugfix",
+    "approvedBy": "yogi.aradhye",
+    "scope": [
+      "src/humanize/time.py",
+      "tests/test_time.py"
+    ]
+  },
+  "placement": "one machine: git worktree, native sandbox (bubblewrap), no microVM",
+  "claudeCodeVersion": "2.1.296 (Claude Code)",
+  "packId": "pack-d812d07de777",
+  "models": {
+    "worker": "sonnet",
+    "reviewer": "opus",
+    "shaper": "sonnet"
+  },
+  "caps": {
+    "max_turns": 40,
+    "max_budget_usd": 3.0,
+    "continuations": 3,
+    "retries": 0,
+    "tasks_per_queue_run": 3,
+    "parallel": 2,
+    "time_limit_sec": 1500,
+    "review_max_turns": 25,
+    "review_max_budget_usd": 1.0
+  },
+  "startedAt": "2026-10-13T15:11:02Z",
+  "endedAt": "2026-10-13T15:13:30Z",
+  "baseBranch": "main",
+  "baseCommit": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+  "headCommit": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+  "changedPaths": [],
+  "linesChanged": 0,
+  "checks": [
+    {
+      "cmd": "python -m pytest -q -p no:cacheprovider -x",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/precisedelta_sign.py",
+      "exit": 1,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/changed.py tests/test_time.py",
+      "exit": 1,
+      "runs": 1,
+      "flaky": false
+    }
+  ],
+  "allChecksPass": false,
+  "grading": {
+    "mode": "fail-first",
+    "caseId": null,
+    "patchApplied": false,
+    "baseChecks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 1
+      }
+    ],
+    "checks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 1,
+        "runs": 1,
+        "flaky": false
+      }
+    ],
+    "ok": false,
+    "reasons": [
+      "fail-first: python {harness}/checks/precisedelta_sign.py fails on the result"
+    ]
+  },
+  "scope": {
+    "harness": [],
+    "outside": []
+  },
+  "review": null,
+  "decision": {
+    "taskId": "t-01M4TX1VSDZ124T2S257MSZHFV",
+    "spec": "0002-bugfix-precisedelta-sign",
+    "className": "bugfix",
+    "path": "reject",
+    "reasons": [
+      "no changes"
+    ],
+    "phase": 2,
+    "packId": "pack-d812d07de777",
+    "next": "Halted with the reasons above. No PR.",
+    "at": "2026-10-13T15:13:30.438Z"
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "allChecksPass": false,
+      "grading": {
+        "mode": "fail-first",
+        "caseId": null,
+        "patchApplied": false,
+        "baseChecks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 1
+          }
+        ],
+        "checks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 1,
+            "runs": 1,
+            "flaky": false
+          }
+        ],
+        "ok": false,
+        "reasons": [
+          "fail-first: python {harness}/checks/precisedelta_sign.py fails on the result"
+        ]
+      },
+      "changedPaths": [],
+      "verdict": null,
+      "path": "reject",
+      "reasons": [
+        "no changes"
+      ]
+    }
+  ],
+  "loops": {
+    "sessions": [
+      {
+        "sessionId": "7825421d-bf4e-4ac8-b44e-95ff03e1da52",
+        "subtype": "success",
+        "isError": true,
+        "turns": 1,
+        "costUsd": 0,
+        "denials": 0,
+        "result": "API Error: Unable to connect to API: Self-signed certificate detected (SELF_SIGNED_CERT_IN_CHAIN). The certificate comes from an authority Claude Code doesn't trust, usually a TLS-inspecting corporate proxy or a gateway signed by a private CA: set NODE_EXTRA_CA_CERTS to that CA bundle, or add it to the system certificate store · see https://code.claude.com/docs/en/network-config",
+        "round": 0,
+        "role": "worker",
+        "exit": 1
+      }
+    ],
+    "finish": [],
+    "scopeDenials": [],
+    "retries": 0
+  },
+  "costUsd": 0,
+  "packEvidenceLines": 14
+}

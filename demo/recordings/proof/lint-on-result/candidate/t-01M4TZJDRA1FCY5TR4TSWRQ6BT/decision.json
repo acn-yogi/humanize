@@ -1,0 +1,17 @@
+{
+  "taskId": "t-01M4TZJDRA1FCY5TR4TSWRQ6BT",
+  "spec": "0002-bugfix-precisedelta-sign",
+  "className": "bugfix",
+  "path": "per_pr",
+  "reasons": [
+    "adversarial review raised findings",
+    "Regression: precisedelta(datetime) now raises TypeError (worked on base, returned '1 hour')",
+    "Sub-unit negative values render as signed zero, e.g. '-0 seconds' / '-0 minutes'",
+    "Tests lack datetime and round-to-zero negative cases, so the regression went unnoticed",
+    "Sign check is fragile and redundant with _date_and_delta; uses a redundant local import"
+  ],
+  "phase": 2,
+  "packId": "pack-7cd23886890b",
+  "next": "A person reviews this PR.",
+  "at": "2026-10-13T16:01:08.691Z"
+}

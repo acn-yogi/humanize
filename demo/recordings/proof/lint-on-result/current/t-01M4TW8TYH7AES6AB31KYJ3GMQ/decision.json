@@ -1,0 +1,14 @@
+{
+  "taskId": "t-01M4TW8TYH7AES6AB31KYJ3GMQ",
+  "spec": "0002-bugfix-precisedelta-sign",
+  "className": "bugfix",
+  "path": "per_pr",
+  "reasons": [
+    "adversarial review raised findings",
+    "the reviewer gave no parsable verdict"
+  ],
+  "phase": 2,
+  "packId": "pack-d812d07de777",
+  "next": "A person reviews this PR.",
+  "at": "2026-10-13T15:07:09.488Z"
+}

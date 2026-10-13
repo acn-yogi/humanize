@@ -1,0 +1,198 @@
+{
+  "v": 1,
+  "taskId": "t-01M4TZ5F1GKE6SRTHPBY5DF95P",
+  "trial": 1,
+  "spec": {
+    "id": "0002-bugfix-precisedelta-sign",
+    "title": "precisedelta() keeps the sign of a negative timedelta",
+    "issue": "python-humanize/humanize#379",
+    "class": "bugfix",
+    "approvedBy": "yogi.aradhye",
+    "scope": [
+      "src/humanize/time.py",
+      "tests/test_time.py"
+    ]
+  },
+  "placement": "one machine: git worktree, native sandbox (bubblewrap), no microVM",
+  "claudeCodeVersion": "2.1.296 (Claude Code)",
+  "packId": "pack-7cd23886890b",
+  "models": {
+    "worker": "sonnet",
+    "reviewer": "opus",
+    "shaper": "sonnet"
+  },
+  "caps": {
+    "max_turns": 40,
+    "max_budget_usd": 3.0,
+    "continuations": 3,
+    "retries": 0,
+    "tasks_per_queue_run": 3,
+    "parallel": 2,
+    "time_limit_sec": 1500,
+    "review_max_turns": 25,
+    "review_max_budget_usd": 1.0
+  },
+  "startedAt": "2026-10-13T15:47:55Z",
+  "endedAt": "2026-10-13T15:54:16Z",
+  "baseBranch": "harness/lint-in-quick-checks",
+  "baseCommit": "168c9deea626bba79aba4e06dddd3763234644e6",
+  "headCommit": "40af8c2b5d2d9bdf351cebc8bb7c3a9ef5cef43d",
+  "changedPaths": [
+    "src/humanize/time.py",
+    "tests/test_time.py"
+  ],
+  "linesChanged": 64,
+  "checks": [
+    {
+      "cmd": "python -m pytest -q -p no:cacheprovider -x",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/precisedelta_sign.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/changed.py tests/test_time.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    }
+  ],
+  "allChecksPass": true,
+  "grading": {
+    "mode": "fail-first",
+    "caseId": null,
+    "patchApplied": false,
+    "baseChecks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 1
+      }
+    ],
+    "checks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 0,
+        "runs": 1,
+        "flaky": false
+      }
+    ],
+    "ok": true,
+    "reasons": []
+  },
+  "scope": {
+    "harness": [],
+    "outside": []
+  },
+  "review": {
+    "verdict": "reject",
+    "reasons": [
+      "Docstring edit leaves the previous fenced code block unclosed, so the new prose and the stray pycon fence render inside the 0-minutes example in the mkdocs docs",
+      "Zero detection scans rendered (possibly translated) text for digits 1-9 instead of using the computed delta, which is fragile"
+    ]
+  },
+  "decision": {
+    "taskId": "t-01M4TZ5F1GKE6SRTHPBY5DF95P",
+    "spec": "0002-bugfix-precisedelta-sign",
+    "className": "bugfix",
+    "path": "per_pr",
+    "reasons": [
+      "adversarial review raised findings",
+      "Docstring edit leaves the previous fenced code block unclosed, so the new prose and the stray pycon fence render inside the 0-minutes example in the mkdocs docs",
+      "Zero detection scans rendered (possibly translated) text for digits 1-9 instead of using the computed delta, which is fragile"
+    ],
+    "phase": 2,
+    "packId": "pack-7cd23886890b",
+    "next": "A person reviews this PR.",
+    "at": "2026-10-13T15:54:16.526Z"
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "allChecksPass": true,
+      "grading": {
+        "mode": "fail-first",
+        "caseId": null,
+        "patchApplied": false,
+        "baseChecks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 1
+          }
+        ],
+        "checks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 0,
+            "runs": 1,
+            "flaky": false
+          }
+        ],
+        "ok": true,
+        "reasons": []
+      },
+      "changedPaths": [
+        "src/humanize/time.py",
+        "tests/test_time.py"
+      ],
+      "verdict": {
+        "verdict": "reject",
+        "reasons": [
+          "Docstring edit leaves the previous fenced code block unclosed, so the new prose and the stray pycon fence render inside the 0-minutes example in the mkdocs docs",
+          "Zero detection scans rendered (possibly translated) text for digits 1-9 instead of using the computed delta, which is fragile"
+        ]
+      },
+      "path": "per_pr",
+      "reasons": [
+        "adversarial review raised findings",
+        "Docstring edit leaves the previous fenced code block unclosed, so the new prose and the stray pycon fence render inside the 0-minutes example in the mkdocs docs",
+        "Zero detection scans rendered (possibly translated) text for digits 1-9 instead of using the computed delta, which is fragile"
+      ]
+    }
+  ],
+  "loops": {
+    "sessions": [
+      {
+        "sessionId": "3d8688c9-b83c-4503-ae51-5994601dd90a",
+        "subtype": "success",
+        "isError": false,
+        "turns": 6,
+        "costUsd": 0.1293543,
+        "denials": 0,
+        "result": "`precisedelta()` now keeps the sign of a negative value, so `precisedelta(timedelta(seconds=-3661))` returns `'-1 hour, 1 minute and 1 second'`. The full suite passes with doctests included (768 passed, 112 skipped), and `ruff check` and `ruff format` are clean. I didn't run the new test against the base commit to confirm it fails there.\n\n- **Fix:** In `src/humanize/time.py`, `precisedelta` is now a thin wrapper around the old body, which moved to `_precisedelta` unchanged. The wrapper adds the `-` when the input is a negative `timedelta`, `int` or `float`, whatever `minimum_unit`, `suppress` ",
+        "round": 0,
+        "role": "worker",
+        "exit": 0
+      },
+      {
+        "sessionId": "535a8b7c-9497-405a-961d-1ef6ecdbd194",
+        "subtype": "success",
+        "isError": false,
+        "turns": 6,
+        "costUsd": 0.23242320000000002,
+        "denials": 0,
+        "result": "I recommend rejecting this change. The behaviour is correct and all checks pass, but the docstring edit breaks the published docs, and the zero check is fragile.\n\n**What holds up**\n- The full suite passes (753 passed, 112 skipped), and so does ruff.\n- `precisedelta(-x) == \"-\" + precisedelta(x)` holds for negative timedeltas, ints and floats, across `minimum_unit`, `suppress` and `format`.\n- Zero, and values that round to zero, never get a sign.\n- Only `src/humanize/time.py` and `tests/test_time.py` changed.\n- The new parametrized test covers timedelta and plain seconds, `suppress`, `minimum_un",
+        "round": 0,
+        "role": "reviewer"
+      }
+    ],
+    "finish": [
+      {
+        "at": "2026-10-13T15:50:21Z",
+        "loop": "finish",
+        "result": "pass",
+        "continuation": 0,
+        "checks": 3,
+        "stopHookActive": "false"
+      }
+    ],
+    "scopeDenials": [],
+    "retries": 0
+  },
+  "costUsd": 0.36177750000000003,
+  "packEvidenceLines": 46
+}

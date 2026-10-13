@@ -1,0 +1,4 @@
+{"at":"2026-10-13T14:57:24Z","loop":"task","event":"start","taskId":"t-01M4TW8TYH7AES6AB31KYJ3GMQ","spec":"0002-bugfix-precisedelta-sign","packId":"pack-d812d07de777"}
+{"at":"2026-10-13T15:00:47Z","loop":"finish","result":"pass","continuation":0,"checks":2,"stopHookActive":"false"}
+{"at":"2026-10-13T15:00:47Z","loop":"session","round":0,"subtype":"success","turns":10,"costUsd":0.173399}
+{"at":"2026-10-13T15:07:09Z","loop":"check","round":0,"path":"per_pr","allChecksPass":true,"verdict":"reject"}

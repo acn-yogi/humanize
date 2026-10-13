@@ -1,0 +1,198 @@
+{
+  "v": 1,
+  "taskId": "t-01M4V20E6J98PKX19765RV6E5G",
+  "trial": 3,
+  "spec": {
+    "id": "0002-bugfix-precisedelta-sign",
+    "title": "precisedelta() keeps the sign of a negative timedelta",
+    "issue": "python-humanize/humanize#379",
+    "class": "bugfix",
+    "approvedBy": "yogi.aradhye",
+    "scope": [
+      "src/humanize/time.py",
+      "tests/test_time.py"
+    ]
+  },
+  "placement": "one machine: git worktree, native sandbox (bubblewrap), no microVM",
+  "claudeCodeVersion": "2.1.296 (Claude Code)",
+  "packId": "pack-7cd23886890b",
+  "models": {
+    "worker": "sonnet",
+    "reviewer": "opus",
+    "shaper": "sonnet"
+  },
+  "caps": {
+    "max_turns": 40,
+    "max_budget_usd": 3.0,
+    "continuations": 3,
+    "retries": 0,
+    "tasks_per_queue_run": 3,
+    "parallel": 2,
+    "time_limit_sec": 1500,
+    "review_max_turns": 25,
+    "review_max_budget_usd": 1.0
+  },
+  "startedAt": "2026-10-13T16:37:42Z",
+  "endedAt": "2026-10-13T16:45:58Z",
+  "baseBranch": "harness/lint-in-quick-checks",
+  "baseCommit": "168c9deea626bba79aba4e06dddd3763234644e6",
+  "headCommit": "df8ca0c8832e9e8120563a8092c6c11b9551ad82",
+  "changedPaths": [
+    "src/humanize/time.py",
+    "tests/test_time.py"
+  ],
+  "linesChanged": 66,
+  "checks": [
+    {
+      "cmd": "python -m pytest -q -p no:cacheprovider -x",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/precisedelta_sign.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/changed.py tests/test_time.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    }
+  ],
+  "allChecksPass": true,
+  "grading": {
+    "mode": "fail-first",
+    "caseId": null,
+    "patchApplied": false,
+    "baseChecks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 1
+      }
+    ],
+    "checks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 0,
+        "runs": 1,
+        "flaky": false
+      }
+    ],
+    "ok": true,
+    "reasons": []
+  },
+  "scope": {
+    "harness": [],
+    "outside": []
+  },
+  "review": {
+    "verdict": "approve",
+    "reasons": [
+      "Meets all acceptance criteria; fail-first check passes and full suite green",
+      "No behaviour change for positive, zero, or non-numeric inputs versus base",
+      "Scope limited to time.py and tests/test_time.py",
+      "Only nits: digit-scan zero detection is hacky, odd '%+' formats yield '-+'"
+    ]
+  },
+  "decision": {
+    "taskId": "t-01M4V20E6J98PKX19765RV6E5G",
+    "spec": "0002-bugfix-precisedelta-sign",
+    "className": "bugfix",
+    "path": "per_pr",
+    "reasons": [
+      "class bugfix is approved per PR (harness/classes.toml)"
+    ],
+    "phase": 2,
+    "packId": "pack-7cd23886890b",
+    "next": "A person reviews this PR.",
+    "at": "2026-10-13T16:45:58.306Z"
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "allChecksPass": true,
+      "grading": {
+        "mode": "fail-first",
+        "caseId": null,
+        "patchApplied": false,
+        "baseChecks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 1
+          }
+        ],
+        "checks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 0,
+            "runs": 1,
+            "flaky": false
+          }
+        ],
+        "ok": true,
+        "reasons": []
+      },
+      "changedPaths": [
+        "src/humanize/time.py",
+        "tests/test_time.py"
+      ],
+      "verdict": {
+        "verdict": "approve",
+        "reasons": [
+          "Meets all acceptance criteria; fail-first check passes and full suite green",
+          "No behaviour change for positive, zero, or non-numeric inputs versus base",
+          "Scope limited to time.py and tests/test_time.py",
+          "Only nits: digit-scan zero detection is hacky, odd '%+' formats yield '-+'"
+        ]
+      },
+      "path": "per_pr",
+      "reasons": [
+        "class bugfix is approved per PR (harness/classes.toml)"
+      ]
+    }
+  ],
+  "loops": {
+    "sessions": [
+      {
+        "sessionId": "1900c736-1b46-4b7e-8640-cdfda56cedbf",
+        "subtype": "success",
+        "isError": false,
+        "turns": 7,
+        "costUsd": 0.14063810000000002,
+        "denials": 0,
+        "result": "`precisedelta()` now keeps the sign of a negative value. `precisedelta(timedelta(seconds=-3661))` returns `'-1 hour, 1 minute and 1 second'`. The full suite passes (756 passed, 112 skipped), and so do the docstring examples. I didn't run the new test on the base commit, so the fail-first check is unconfirmed. The old code never emitted a leading `-`, so the negative cases should fail there.\n\n- **Fix:** In `src/humanize/time.py`, `precisedelta` is now a thin wrapper around the old body, which moved unchanged into a private `_precisedelta`. The wrapper takes the absolute value of a negative `tim",
+        "round": 0,
+        "role": "worker",
+        "exit": 0
+      },
+      {
+        "sessionId": "91635d6d-f20a-4512-b9d8-8ebf1582fec0",
+        "subtype": "success",
+        "isError": false,
+        "turns": 8,
+        "costUsd": 0.25712979999999996,
+        "denials": 0,
+        "result": "I recommend approving this change. I tried to build a case against it and couldn't find one that holds up.\n\n**Meets the spec**\n- **Sign is kept:** `precisedelta` now works out the result for the absolute value and puts `-` in front when the input was negative. This works for both a `timedelta` and a plain int or float, and with every `minimum_unit`, `suppress` and `format`.\n- **Zero stays unsigned:** `0`, `-0.0` and values that round down to zero (for example `-0.1s` with `minimum_unit=\"minutes\"`) all come back as `'0 …'` with no sign.\n- **Positive values are unchanged:** a positive input take",
+        "round": 0,
+        "role": "reviewer"
+      }
+    ],
+    "finish": [
+      {
+        "at": "2026-10-13T16:41:08Z",
+        "loop": "finish",
+        "result": "pass",
+        "continuation": 0,
+        "checks": 3,
+        "stopHookActive": "false"
+      }
+    ],
+    "scopeDenials": [],
+    "retries": 0
+  },
+  "costUsd": 0.39776789999999995,
+  "packEvidenceLines": 57
+}

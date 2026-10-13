@@ -1,0 +1,198 @@
+{
+  "v": 1,
+  "taskId": "t-01M4TXWYJ0A4BW2FT9P7RMWEPV",
+  "trial": 4,
+  "spec": {
+    "id": "0002-bugfix-precisedelta-sign",
+    "title": "precisedelta() keeps the sign of a negative timedelta",
+    "issue": "python-humanize/humanize#379",
+    "class": "bugfix",
+    "approvedBy": "yogi.aradhye",
+    "scope": [
+      "src/humanize/time.py",
+      "tests/test_time.py"
+    ]
+  },
+  "placement": "one machine: git worktree, native sandbox (bubblewrap), no microVM",
+  "claudeCodeVersion": "2.1.296 (Claude Code)",
+  "packId": "pack-d812d07de777",
+  "models": {
+    "worker": "sonnet",
+    "reviewer": "opus",
+    "shaper": "sonnet"
+  },
+  "caps": {
+    "max_turns": 40,
+    "max_budget_usd": 3.0,
+    "continuations": 3,
+    "retries": 0,
+    "tasks_per_queue_run": 3,
+    "parallel": 2,
+    "time_limit_sec": 1500,
+    "review_max_turns": 25,
+    "review_max_budget_usd": 1.0
+  },
+  "startedAt": "2026-10-13T15:25:47Z",
+  "endedAt": "2026-10-13T15:31:26Z",
+  "baseBranch": "main",
+  "baseCommit": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+  "headCommit": "5df966eea2efeacb73f97bfd7099d8d7dcaad032",
+  "changedPaths": [
+    "src/humanize/time.py",
+    "tests/test_time.py"
+  ],
+  "linesChanged": 47,
+  "checks": [
+    {
+      "cmd": "python -m pytest -q -p no:cacheprovider -x",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/precisedelta_sign.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/changed.py tests/test_time.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    }
+  ],
+  "allChecksPass": true,
+  "grading": {
+    "mode": "fail-first",
+    "caseId": null,
+    "patchApplied": false,
+    "baseChecks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 1
+      }
+    ],
+    "checks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 0,
+        "runs": 1,
+        "flaky": false
+      }
+    ],
+    "ok": true,
+    "reasons": []
+  },
+  "scope": {
+    "harness": [],
+    "outside": []
+  },
+  "review": {
+    "verdict": "approve",
+    "reasons": [
+      "Sign preserved for all minimum_unit/suppress/format paths via one recursive call; positives and zero unchanged",
+      "Fail-first check and full suite pass; scope limited to time.py and test_time.py",
+      "Minor: zero check scans the output for digits 1-9, and a negative that rounds to zero drops its sign; neither contradicts the spec",
+      "Minor: test repeats an unrelated -3661 assertion in every parametrized case"
+    ]
+  },
+  "decision": {
+    "taskId": "t-01M4TXWYJ0A4BW2FT9P7RMWEPV",
+    "spec": "0002-bugfix-precisedelta-sign",
+    "className": "bugfix",
+    "path": "per_pr",
+    "reasons": [
+      "class bugfix is approved per PR (harness/classes.toml)"
+    ],
+    "phase": 2,
+    "packId": "pack-d812d07de777",
+    "next": "A person reviews this PR.",
+    "at": "2026-10-13T15:31:26.546Z"
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "allChecksPass": true,
+      "grading": {
+        "mode": "fail-first",
+        "caseId": null,
+        "patchApplied": false,
+        "baseChecks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 1
+          }
+        ],
+        "checks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 0,
+            "runs": 1,
+            "flaky": false
+          }
+        ],
+        "ok": true,
+        "reasons": []
+      },
+      "changedPaths": [
+        "src/humanize/time.py",
+        "tests/test_time.py"
+      ],
+      "verdict": {
+        "verdict": "approve",
+        "reasons": [
+          "Sign preserved for all minimum_unit/suppress/format paths via one recursive call; positives and zero unchanged",
+          "Fail-first check and full suite pass; scope limited to time.py and test_time.py",
+          "Minor: zero check scans the output for digits 1-9, and a negative that rounds to zero drops its sign; neither contradicts the spec",
+          "Minor: test repeats an unrelated -3661 assertion in every parametrized case"
+        ]
+      },
+      "path": "per_pr",
+      "reasons": [
+        "class bugfix is approved per PR (harness/classes.toml)"
+      ]
+    }
+  ],
+  "loops": {
+    "sessions": [
+      {
+        "sessionId": "043a59f0-71bb-4d41-bed1-481d3e970f18",
+        "subtype": "success",
+        "isError": false,
+        "turns": 12,
+        "costUsd": 0.13810139999999999,
+        "denials": 0,
+        "result": "`precisedelta()` now keeps the sign of a negative value, so `precisedelta(timedelta(seconds=-3661))` returns `'-1 hour, 1 minute and 1 second'`. The full suite passes (756 passed, 112 skipped), and so do the doctests in `src`. I didn't run the new tests against the base commit, so the fail-first check is reasoned rather than observed. The sign-keeping assertions would fail there because the old code returned the unsigned text.\n\n- **Fix** (`src/humanize/time.py`): for a negative `timedelta` or number, it renders the absolute value and prefixes `-`. It works with any `minimum_unit`, `suppress` a",
+        "round": 0,
+        "role": "worker",
+        "exit": 0
+      },
+      {
+        "sessionId": "1ec4e5e9-4ab6-49bb-891d-5dcce39d8e6a",
+        "subtype": "success",
+        "isError": false,
+        "turns": 3,
+        "costUsd": 0.186121,
+        "denials": 0,
+        "result": "I couldn't make a strong case against merging this, so I'm approving it. The full suite passes (756 passed, 112 skipped). The reproducing check fails on the base commit and passes here, and only `src/humanize/time.py` and `tests/test_time.py` changed.\n\n**What holds up**\n- The fix in `precisedelta()` handles negatives in one place: it renders the absolute value by calling itself, then adds a leading `-`. Every `minimum_unit`, `suppress` and `format` goes through the same code, so the rule holds for all of them. It works for plain numbers and for `timedelta` values. `datetime` inputs are exclude",
+        "round": 0,
+        "role": "reviewer"
+      }
+    ],
+    "finish": [
+      {
+        "at": "2026-10-13T15:28:18Z",
+        "loop": "finish",
+        "result": "pass",
+        "continuation": 0,
+        "checks": 2,
+        "stopHookActive": "false"
+      }
+    ],
+    "scopeDenials": [],
+    "retries": 0
+  },
+  "costUsd": 0.3242224,
+  "packEvidenceLines": 27
+}

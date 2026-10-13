@@ -1,0 +1,86 @@
+{
+  "case": "lint-in-quick-checks",
+  "pack": "candidate",
+  "base": "harness/lint-in-quick-checks",
+  "baseSha": "168c9deea626bba79aba4e06dddd3763234644e6",
+  "spec": "0002-bugfix-precisedelta-sign",
+  "k": 3,
+  "trials": 2,
+  "errors": 0,
+  "passes": 0,
+  "passK": 0,
+  "costUsd": 0.6955967000000001,
+  "interrupted": [
+    {
+      "taskId": "t-01M4TZZ29RYVMV2CSJBR84CN8X",
+      "costUsd": 0.20193599999999998
+    }
+  ],
+  "interruptedCostUsd": 0.20193599999999998,
+  "packIds": [
+    "pack-7cd23886890b"
+  ],
+  "at": "2026-10-13T16:23:08Z",
+  "runs": [
+    {
+      "trial": 1,
+      "taskId": "t-01M4TZ5F1GKE6SRTHPBY5DF95P",
+      "pack": "candidate",
+      "base": "harness/lint-in-quick-checks",
+      "baseSha": "168c9deea626bba79aba4e06dddd3763234644e6",
+      "headSha": "40af8c2b5d2d9bdf351cebc8bb7c3a9ef5cef43d",
+      "packId": "pack-7cd23886890b",
+      "dir": "/mnt/c/code/workbench-demo/runs/proofs/lint-in-quick-checks/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P",
+      "checksPass": true,
+      "changed": true,
+      "failFirst": true,
+      "review0": false,
+      "reviewVerdict0": "reject",
+      "reviewReasons0": [
+        "Docstring edit leaves the previous fenced code block unclosed, so the new prose and the stray pycon fence render inside the 0-minutes example in the mkdocs docs",
+        "Zero detection scans rendered (possibly translated) text for digits 1-9 instead of using the computed delta, which is fragile"
+      ],
+      "rounds": 1,
+      "retries": 0,
+      "ruffOk": true,
+      "ruffFindings": 0,
+      "stopBlocks": 0,
+      "workerTurns": 6,
+      "sessionErrors": [],
+      "costUsd": 0.36177750000000003,
+      "outcome": "fail",
+      "why": "reviewer: reject at round 0"
+    },
+    {
+      "trial": 2,
+      "taskId": "t-01M4TZJDRA1FCY5TR4TSWRQ6BT",
+      "pack": "candidate",
+      "base": "harness/lint-in-quick-checks",
+      "baseSha": "168c9deea626bba79aba4e06dddd3763234644e6",
+      "headSha": "f37849165a6f4e99ec53fb9097f08933e1bd5b8c",
+      "packId": "pack-7cd23886890b",
+      "dir": "/mnt/c/code/workbench-demo/runs/proofs/lint-in-quick-checks/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT",
+      "checksPass": true,
+      "changed": true,
+      "failFirst": true,
+      "review0": false,
+      "reviewVerdict0": "reject",
+      "reviewReasons0": [
+        "Regression: precisedelta(datetime) now raises TypeError (worked on base, returned '1 hour')",
+        "Sub-unit negative values render as signed zero, e.g. '-0 seconds' / '-0 minutes'",
+        "Tests lack datetime and round-to-zero negative cases, so the regression went unnoticed",
+        "Sign check is fragile and redundant with _date_and_delta; uses a redundant local import"
+      ],
+      "rounds": 1,
+      "retries": 0,
+      "ruffOk": true,
+      "ruffFindings": 0,
+      "stopBlocks": 0,
+      "workerTurns": 7,
+      "sessionErrors": [],
+      "costUsd": 0.3338192,
+      "outcome": "fail",
+      "why": "reviewer: reject at round 0"
+    }
+  ]
+}

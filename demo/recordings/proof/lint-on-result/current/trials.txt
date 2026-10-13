@@ -1,0 +1,9 @@
+case lint-on-result, pack current (base main), spec 0002-bugfix-precisedelta-sign, ruff 0.16.10
+trial  task                         outcome  checks  reviewer0  ruff         blocks cost    why
+1      t-01M4TW8TYH7AES6AB31KYJ3GMQ error    pass    reject     pass         0      $0.43   session error: reviewer round 0: success, API Error: Unable to connect to API: Self-signed certificate detected (SELF_SIGNED_CERT_IN_CHAIN). The certificate comes
+2      t-01M4TWWB3XYF0CN8WP2XG415N8 error    FAIL    none       pass         0      $0      session error: worker round 0: success, API Error: Unable to connect to API: Self-signed certificate detected (SELF_SIGNED_CERT_IN_CHAIN). The certificate comes; trusted checks failed; empty or out-of-scope diff; fail-first did not hold
+3      t-01M4TX1VSDZ124T2S257MSZHFV error    FAIL    none       pass         0      $0      session error: worker round 0: success, API Error: Unable to connect to API: Self-signed certificate detected (SELF_SIGNED_CERT_IN_CHAIN). The certificate comes; trusted checks failed; empty or out-of-scope diff; fail-first did not hold
+4      t-01M4TXWYJ0A4BW2FT9P7RMWEPV fail     pass    approve    3 finding(s) 0      $0.32   ruff: 3 finding(s)
+5      t-01M4TY8K7YH6A2DE6R8ZGDXG1A fail     pass    reject     1 finding(s) 0      $0.36   ruff: 1 finding(s)
+6      t-01M4TYNPR2GV0GC731SE2QFQ78 fail     pass    approve    1 finding(s) 0      $0.31   ruff: 1 finding(s)
+pass^k: 0 (0 of 3 conclusive trial(s) passed, 3 error trial(s) not counted), $1.42 in all

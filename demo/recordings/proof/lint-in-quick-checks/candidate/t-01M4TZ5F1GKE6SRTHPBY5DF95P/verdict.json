@@ -1,0 +1,1 @@
+{"verdict":"reject","reasons":["Docstring edit leaves the previous fenced code block unclosed, so the new prose and the stray pycon fence render inside the 0-minutes example in the mkdocs docs","Zero detection scans rendered (possibly translated) text for digits 1-9 instead of using the computed delta, which is fragile"]}

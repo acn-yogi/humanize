@@ -1,0 +1,15 @@
+{
+  "taskId": "t-01M4TZ5F1GKE6SRTHPBY5DF95P",
+  "spec": "0002-bugfix-precisedelta-sign",
+  "className": "bugfix",
+  "path": "per_pr",
+  "reasons": [
+    "adversarial review raised findings",
+    "Docstring edit leaves the previous fenced code block unclosed, so the new prose and the stray pycon fence render inside the 0-minutes example in the mkdocs docs",
+    "Zero detection scans rendered (possibly translated) text for digits 1-9 instead of using the computed delta, which is fragile"
+  ],
+  "phase": 2,
+  "packId": "pack-7cd23886890b",
+  "next": "A person reviews this PR.",
+  "at": "2026-10-13T15:54:16.526Z"
+}

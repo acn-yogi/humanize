@@ -1,0 +1,128 @@
+{
+  "id": "lint-in-quick-checks",
+  "kind": "trajectory",
+  "status": "reproduced, not fixed",
+  "from": "audit of 2026-10-13 (demo/recordings/audit/audit.txt): REVIEW_REJECTED on 3 of 3 live tasks at round 0 (specs 0001, 0002, 0004); on PR #3 (spec 0002, task t-01M4RZHVGFWY1FXM7RNXWAVNQA) the reviewer's findings included lint: new test lines over 88 chars, ruff E501. The Stop hook ran the spec's quick checks and never the repository's own lint, so a session could finish with lint findings left for the reviewer.",
+  "failureClass": "REVIEW_REJECTED",
+  "reasonCode": "lint",
+  "spec": "0002-bugfix-precisedelta-sign",
+  "specFile": "specs/0002-bugfix-precisedelta-sign.md",
+  "tasks": [
+    "t-01M4RYVYEG6H31MRD8C2N01K04",
+    "t-01M4RZHVFWTPBC0BG9QVPBAS3T",
+    "t-01M4RZHVGFWY1FXM7RNXWAVNQA"
+  ],
+  "baseSha": "52a0efb50be93f797ba773b407ded39149984420",
+  "k": 3,
+  "stateCheck": [
+    "ruff check --no-fix (the repository's configured lint, pinned to the pre-commit version) passes on the result's changed Python files",
+    "the adversarial reviewer approves at round 0, with no retry round",
+    "the trusted acceptance checks pass in the fresh clone and the diff is inside the spec's scope"
+  ],
+  "fixUnderTest": "harness/hooks/stop-checks.sh runs the repository's lint ([checks] lint in harness/config.toml, installed by [setup]) beside the spec's quick checks, so a session cannot finish with lint findings",
+  "fixBranch": "harness/lint-in-quick-checks",
+  "budgetUsdPerRun": 1.0,
+  "runner": "harness/bin/case-run.sh harness/cases/lint-in-quick-checks.json --pack current|candidate --k 3",
+  "proof": {
+    "k": 3,
+    "before": {
+      "passK": 0,
+      "passes": 0,
+      "trials": 3,
+      "errors": 3,
+      "costUsd": 1.4226,
+      "base": "main",
+      "baseSha": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+      "packIds": [
+        "pack-d812d07de777"
+      ]
+    },
+    "after": {
+      "passK": 0,
+      "passes": 0,
+      "trials": 2,
+      "errors": 0,
+      "costUsd": 0.6956,
+      "base": "harness/lint-in-quick-checks",
+      "baseSha": "168c9deea626bba79aba4e06dddd3763234644e6",
+      "packIds": [
+        "pack-7cd23886890b"
+      ]
+    },
+    "regressions": 0,
+    "judge": [
+      {
+        "taskId": "t-01M4TZ5F1GKE6SRTHPBY5DF95P",
+        "verdict": "earned",
+        "model": "opus"
+      },
+      {
+        "taskId": "t-01M4TZJDRA1FCY5TR4TSWRQ6BT",
+        "verdict": "earned",
+        "model": "opus"
+      }
+    ],
+    "verdict": "NO-SHIP",
+    "reasons": [
+      "after pass^k is 0 (0 of 2 passed)"
+    ],
+    "at": "2026-10-13T16:56:12Z",
+    "provenAt": null,
+    "record": "runs/proofs/lint-in-quick-checks/verdict.json (copy: demo/recordings/proof/lint-in-quick-checks/)"
+  },
+  "nextCandidates": {
+    "note": "the reviewer rejected round 0 in these trials for findings lint cannot see; each is a candidate for the next case, and the audit now ranks REVIEW_REJECTED above LINT_FAILED",
+    "rejections": [
+      {
+        "pack": "recorded run (PR #3)",
+        "taskId": "t-01M4RZHVGFWY1FXM7RNXWAVNQA",
+        "round": 0,
+        "reasons": [
+          "Docstring edit puts the new text inside the unclosed '0 minutes' example, which breaks the mkdocstrings-rendered docs",
+          "Extends 'zero never gains a sign' to any negative value whose output renders as zero, using a fragile scan for digits 1-9 in the output string, which the spec did not ask for",
+          "Unnecessary public-wrapper/private-helper split that repeats _date_and_delta's type checks"
+        ]
+      },
+      {
+        "pack": "recorded run (PR #3)",
+        "taskId": "t-01M4RZHVGFWY1FXM7RNXWAVNQA",
+        "round": 1,
+        "reasons": [
+          "New test lines exceed 88 chars (tests/test_time.py:846-848, 862, 875); E501 is enabled via ruff 'E' and black would reformat, so pre-commit fails",
+          "precisedelta(timedelta(microseconds=-1)) returns '-0 seconds', a rendered zero with a sign, untested against the 'zero never gains a sign' constraint",
+          "Sign derived from clock comparison (date > now) plus a dead datetime guard instead of checking the input's sign directly",
+          "Two commits with the same message, the second partly undoing the first; should be squashed"
+        ]
+      },
+      {
+        "pack": "current",
+        "taskId": "t-01M4TY8K7YH6A2DE6R8ZGDXG1A",
+        "reasons": [
+          "Regression: precisedelta(datetime) now raises TypeError (value < 0 on a datetime); on base it returned '1 hour'",
+          "Zero is detected by scanning the translated output for digits instead of using the computed values",
+          "test_precisedelta_zero_has_no_sign has an assert that ignores its parameter, so zero coverage is weaker than it looks",
+          "No test covers the datetime input path the change broke"
+        ]
+      },
+      {
+        "pack": "candidate",
+        "taskId": "t-01M4TZ5F1GKE6SRTHPBY5DF95P",
+        "reasons": [
+          "Docstring edit leaves the previous fenced code block unclosed, so the new prose and the stray pycon fence render inside the 0-minutes example in the mkdocs docs",
+          "Zero detection scans rendered (possibly translated) text for digits 1-9 instead of using the computed delta, which is fragile"
+        ]
+      },
+      {
+        "pack": "candidate",
+        "taskId": "t-01M4TZJDRA1FCY5TR4TSWRQ6BT",
+        "reasons": [
+          "Regression: precisedelta(datetime) now raises TypeError (worked on base, returned '1 hour')",
+          "Sub-unit negative values render as signed zero, e.g. '-0 seconds' / '-0 minutes'",
+          "Tests lack datetime and round-to-zero negative cases, so the regression went unnoticed",
+          "Sign check is fragile and redundant with _date_and_delta; uses a redundant local import"
+        ]
+      }
+    ]
+  },
+  "narrowCase": "lint-on-result"
+}

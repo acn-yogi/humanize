@@ -1,0 +1,198 @@
+{
+  "v": 1,
+  "taskId": "t-01M4TYNPR2GV0GC731SE2QFQ78",
+  "trial": 6,
+  "spec": {
+    "id": "0002-bugfix-precisedelta-sign",
+    "title": "precisedelta() keeps the sign of a negative timedelta",
+    "issue": "python-humanize/humanize#379",
+    "class": "bugfix",
+    "approvedBy": "yogi.aradhye",
+    "scope": [
+      "src/humanize/time.py",
+      "tests/test_time.py"
+    ]
+  },
+  "placement": "one machine: git worktree, native sandbox (bubblewrap), no microVM",
+  "claudeCodeVersion": "2.1.296 (Claude Code)",
+  "packId": "pack-d812d07de777",
+  "models": {
+    "worker": "sonnet",
+    "reviewer": "opus",
+    "shaper": "sonnet"
+  },
+  "caps": {
+    "max_turns": 40,
+    "max_budget_usd": 3.0,
+    "continuations": 3,
+    "retries": 0,
+    "tasks_per_queue_run": 3,
+    "parallel": 2,
+    "time_limit_sec": 1500,
+    "review_max_turns": 25,
+    "review_max_budget_usd": 1.0
+  },
+  "startedAt": "2026-10-13T15:39:19Z",
+  "endedAt": "2026-10-13T15:45:35Z",
+  "baseBranch": "main",
+  "baseCommit": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+  "headCommit": "a12d1a92e688eb0761c4ce3ccff7d36863ceb91e",
+  "changedPaths": [
+    "src/humanize/time.py",
+    "tests/test_time.py"
+  ],
+  "linesChanged": 40,
+  "checks": [
+    {
+      "cmd": "python -m pytest -q -p no:cacheprovider -x",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/precisedelta_sign.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    },
+    {
+      "cmd": "python {harness}/checks/changed.py tests/test_time.py",
+      "exit": 0,
+      "runs": 1,
+      "flaky": false
+    }
+  ],
+  "allChecksPass": true,
+  "grading": {
+    "mode": "fail-first",
+    "caseId": null,
+    "patchApplied": false,
+    "baseChecks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 1
+      }
+    ],
+    "checks": [
+      {
+        "cmd": "python {harness}/checks/precisedelta_sign.py",
+        "exit": 0,
+        "runs": 1,
+        "flaky": false
+      }
+    ],
+    "ok": true,
+    "reasons": []
+  },
+  "scope": {
+    "harness": [],
+    "outside": []
+  },
+  "review": {
+    "verdict": "approve",
+    "reasons": [
+      "Fix matches spec: '-' + precisedelta(abs) for timedelta/int/float across all options; positive and zero unchanged",
+      "Parametrized regression and zero tests added in existing style; full suite passes; fail-first confirmed",
+      "No out-of-scope changes; docstring gains one correct negative example",
+      "Edge case to decide on: tiny negatives render '-0 seconds', which follows the spec's stated rule but is untested"
+    ]
+  },
+  "decision": {
+    "taskId": "t-01M4TYNPR2GV0GC731SE2QFQ78",
+    "spec": "0002-bugfix-precisedelta-sign",
+    "className": "bugfix",
+    "path": "per_pr",
+    "reasons": [
+      "class bugfix is approved per PR (harness/classes.toml)"
+    ],
+    "phase": 2,
+    "packId": "pack-d812d07de777",
+    "next": "A person reviews this PR.",
+    "at": "2026-10-13T15:45:35.009Z"
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "allChecksPass": true,
+      "grading": {
+        "mode": "fail-first",
+        "caseId": null,
+        "patchApplied": false,
+        "baseChecks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 1
+          }
+        ],
+        "checks": [
+          {
+            "cmd": "python {harness}/checks/precisedelta_sign.py",
+            "exit": 0,
+            "runs": 1,
+            "flaky": false
+          }
+        ],
+        "ok": true,
+        "reasons": []
+      },
+      "changedPaths": [
+        "src/humanize/time.py",
+        "tests/test_time.py"
+      ],
+      "verdict": {
+        "verdict": "approve",
+        "reasons": [
+          "Fix matches spec: '-' + precisedelta(abs) for timedelta/int/float across all options; positive and zero unchanged",
+          "Parametrized regression and zero tests added in existing style; full suite passes; fail-first confirmed",
+          "No out-of-scope changes; docstring gains one correct negative example",
+          "Edge case to decide on: tiny negatives render '-0 seconds', which follows the spec's stated rule but is untested"
+        ]
+      },
+      "path": "per_pr",
+      "reasons": [
+        "class bugfix is approved per PR (harness/classes.toml)"
+      ]
+    }
+  ],
+  "loops": {
+    "sessions": [
+      {
+        "sessionId": "a774b50e-deb1-4d03-98bf-6467f134983d",
+        "subtype": "success",
+        "isError": false,
+        "turns": 8,
+        "costUsd": 0.1305689,
+        "denials": 0,
+        "result": "`precisedelta()` now keeps the sign of a negative value, and the full suite passes (759 passed, 112 skipped, doctests included). I didn't run the new tests against the base commit, so \"fails without the fix\" is untested. The first run of the new tests did fail, but only because of my own mistakes in `time.py`.\n\n- **Fix:** in `src/humanize/time.py`, `precisedelta()` now returns `\"-\" + precisedelta(abs value, same minimum_unit, suppress and format)` for a negative `timedelta`, int or float. `precisedelta(timedelta(seconds=-3661))` gives `'-1 hour, 1 minute and 1 second'`. Positive values and zer",
+        "round": 0,
+        "role": "worker",
+        "exit": 0
+      },
+      {
+        "sessionId": "c950cadc-922d-4e44-9e55-c51e9c740434",
+        "subtype": "success",
+        "isError": false,
+        "turns": 3,
+        "costUsd": 0.1817094,
+        "denials": 0,
+        "result": "I recommend approving. I couldn't build a convincing case against merging; there is one edge case you should decide on before it ships.\n\n**What I checked**\n- **Fix:** `src/humanize/time.py` adds an early return for negative values: it renders the absolute value and puts a `-` in front, passing `minimum_unit`, `suppress` and `format` through unchanged. The import inside the function follows the file's existing lazy-import pattern (`_date_and_delta` does the same). Positive values and zero go through exactly the same code as before.\n- **Inputs it covers:** `timedelta`, `int` and `float`. `Decima",
+        "round": 0,
+        "role": "reviewer"
+      }
+    ],
+    "finish": [
+      {
+        "at": "2026-10-13T15:41:56Z",
+        "loop": "finish",
+        "result": "pass",
+        "continuation": 0,
+        "checks": 2,
+        "stopHookActive": "false"
+      }
+    ],
+    "scopeDenials": [],
+    "retries": 0
+  },
+  "costUsd": 0.3122783,
+  "packEvidenceLines": 27
+}

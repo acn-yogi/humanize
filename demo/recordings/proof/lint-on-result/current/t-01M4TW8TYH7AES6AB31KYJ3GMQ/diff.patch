@@ -1,0 +1,108 @@
+diff --git a/src/humanize/time.py b/src/humanize/time.py
+index 7c4a28e..16b5b81 100644
+--- a/src/humanize/time.py
++++ b/src/humanize/time.py
+@@ -534,6 +534,14 @@ def precisedelta(
+ 
+     ```
+ 
++    A negative value keeps its sign:
++
++    ```pycon
++    >>> precisedelta(dt.timedelta(seconds=-3661))
++    '-1 hour, 1 minute and 1 second'
++
++    ```
++
+     If the delta is too small to be represented with the minimum unit,
+     a value of zero will be returned:
+ 
+@@ -552,6 +560,13 @@ def precisedelta(
+     if date is None:
+         return str(value)
+ 
++    import datetime as dt
++
++    if isinstance(value, dt.timedelta):
++        negative = value < dt.timedelta(0)
++    else:
++        negative = not isinstance(value, dt.datetime) and value < 0
++
+     suppress_set = {Unit[s.upper()] for s in suppress}
+ 
+     # Find a suitable minimum unit (it can be greater than the one that the
+@@ -655,9 +670,11 @@ def precisedelta(
+     import math
+ 
+     texts: list[str] = []
++    shown_nonzero = False
+     for unit, fmt in zip(reversed(Unit), fmts):
+         singular_txt, plural_txt, fmt_value = fmt
+         if fmt_value > 0 or (not texts and unit == min_unit):
++            shown_nonzero = shown_nonzero or fmt_value > 0
+             _fmt_value = 2 if 1 < fmt_value < 2 else int(fmt_value)
+             fmt_txt = _ngettext(singular_txt, plural_txt, _fmt_value)
+             if unit == min_unit and math.modf(fmt_value)[0] > 0:
+@@ -674,13 +691,16 @@ def precisedelta(
+         if unit == min_unit:
+             break
+ 
++    # A value that rounds to zero keeps no sign.
++    sign = "-" if negative and shown_nonzero else ""
++
+     if len(texts) == 1:
+-        return texts[0]
++        return sign + texts[0]
+ 
+     head = ", ".join(texts[:-1])
+     tail = texts[-1]
+ 
+-    return _("%s and %s") % (head, tail)
++    return sign + _("%s and %s") % (head, tail)
+ 
+ 
+ def _rounding_by_fmt(format: str, value: float) -> float | int:
+diff --git a/tests/test_time.py b/tests/test_time.py
+index 887a3fc..c0dc68a 100644
+--- a/tests/test_time.py
++++ b/tests/test_time.py
+@@ -759,6 +759,39 @@ def test_precisedelta_custom_format(
+     assert humanize.precisedelta(val, minimum_unit=min_unit, format=fmt) == expected
+ 
+ 
++@pytest.mark.parametrize(
++    "val, kwargs",
++    [
++        (dt.timedelta(seconds=3661), {}),
++        (3661, {}),
++        (dt.timedelta(days=2, seconds=3633, microseconds=123000), {}),
++        (dt.timedelta(microseconds=1001), {"minimum_unit": "microseconds"}),
++        (dt.timedelta(seconds=90), {"suppress": ["seconds", "minutes"]}),
++        (dt.timedelta(days=400), {"minimum_unit": "days", "suppress": ["years"]}),
++        (dt.timedelta(seconds=1, microseconds=230000), {"format": "%0.4f"}),
++        (1.5, {"minimum_unit": "milliseconds"}),
++    ],
++)
++def test_precisedelta_negative(val: dt.timedelta | float, kwargs: dict) -> None:
++    neg = -val
++    assert humanize.precisedelta(neg, **kwargs) == "-" + humanize.precisedelta(
++        val, **kwargs
++    )
++
++
++@pytest.mark.parametrize(
++    "val, kwargs",
++    [
++        (dt.timedelta(0), {}),
++        (0, {}),
++        (-0.0, {}),
++        (dt.timedelta(seconds=-0.1), {"minimum_unit": "minutes"}),
++    ],
++)
++def test_precisedelta_zero_has_no_sign(val: dt.timedelta | float, kwargs: dict) -> None:
++    assert not humanize.precisedelta(val, **kwargs).startswith("-")
++
++
+ @pytest.mark.parametrize(
+     "val, min_unit, suppress, expected",
+     [
