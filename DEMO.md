@@ -41,6 +41,7 @@ and a backlog of small, crisp issues. Every spec below is a real open upstream i
 | Specs | `specs/*.md` | Intent, constraints, out of scope and acceptance criteria as runnable checks. TOML front matter carries class, scope, checks and caps. |
 | Classes | `harness/classes.toml` | How a human approves each class: per PR, per batch, or graduated (merges by policy). |
 | Queue loop | `harness/bin/dispatch.sh` | Loop 4: the next approved specs, a forecast before any spend, a cap per wake-up, a timer. |
+| Triggers | `harness/config.toml` `[triggers]`, `harness/bin/dispatch.sh --watch`, `harness/bin/watch-tickets.sh`, `harness/recurring/` | What starts the work: a ticket watch on the fork's issues, schedule entries, a budget pool. A trigger only puts work in the queue; the halt flag `runs/HALT` beats all three (step 8). |
 | Workbench | `harness/bin/workbench.sh` | One task end to end: worktree, Claude, checks, reviewer, router, packet, PR. |
 | Guardrails | `.claude/workbench/settings.template.json`, `harness/hooks/`, `harness/pack/` | dontAsk mode, deny rules, the native sandbox, a scope hook, a Stop hook, the policy and evidence mods. |
 | Attended settings | `.claude/settings.json` | For a person running Claude Code in the fork: sandbox on, a prompt before any harness or spec edit. Headless runs never load it (`--setting-sources user`). |
@@ -402,6 +403,62 @@ there: `intent.md`, `prompt.md`, `transcript.jsonl`, `settings.json`, `summary.j
 `forecast.txt`, `pack-evidence.jsonl`. `harness/bin/intake.sh specs/0005-*.md specs/0006-*.md
 specs/0007-*.md` repeats the intake check live on the working tree for nothing.
 
+### 8. What starts the work: three triggers (optional, 2 minutes, no spend)
+
+Everything so far started by hand or on a 30 minute timer. Unattended, work starts in one of
+three ways, and all three are configuration in `harness/config.toml` `[triggers]`: a trigger
+only puts work in the queue, and the dispatcher, the workbench and the sandboxed run are the
+same whichever trigger fed them. The scripted driver shows this as Act 7
+(`demo/run-demo.sh --acts 7`, no spend); by hand it is three commands:
+
+```
+sed -n '/^\[triggers\]/,$p' harness/config.toml
+harness/bin/watch-tickets.sh --dry-run
+harness/bin/dispatch.sh --dry-run --pool-usd 1
+```
+
+**The audience sees** the configuration first, then each trigger's dry run:
+
+| Trigger | Configuration | What the dry run shows |
+|---|---|---|
+| Ticket watch | `[triggers.ticket]`: `enabled` (off here), `label = "priority:high"`, `approvers = ["acn-yogi"]`, `poll_minutes = 5`, `comment = false` | `watch-tickets.sh --dry-run` reads the fork's open issues (never upstream) and prints one line per issue with the reason: `START #5 ... priority:high added by acn-yogi (approver)`. A label added by anyone not in the list is a request, not an approval, and starts nothing. One issue, one task: a spec or ledger row carrying `trigger = "ticket:5"` means it ran; a reopened issue counts again. |
+| Schedule | `[[triggers.schedule]]` entries with `cron` and `tz`: the 30 minute timer (`take = "queue"`), Mondays 06:00 `spec = "flaky-test-hunt"`, the first of the month `spec = "docstring-sweep"` | `dispatch.sh --watch` lists each entry and its next fire time. A queue entry wakes the dispatcher; a spec entry copies `harness/recurring/<name>.md` into `specs/` as one dated spec, approved by the person who approved the recurring work, `trigger = "schedule:<name>:<date>"`, committed on `main` for the next wake-up. The matcher is `harness/lib/cron.py`, five fields, tested. |
+| Budget pool | `[triggers.budget]`: `pool_usd` (0 here: unlimited within the caps) and `window` (`run`, `day`, `week`, `month`); `--pool-usd N` overrides it for one run | `dispatch.sh --dry-run --pool-usd 1` prints the queue, then `pool: $1.00 (window run), spent $0.00 over 0 task(s), left $1.00, per-task cap $3.00: 0 more task(s) fit` and `budget-exhausted: the pool cannot pay for one more task; 3 approved spec(s) wait`. Live, the dispatcher starts a task only while one full per-task cap fits in what is left, debits each finished task from the ledger, and writes one `budget-exhausted` row `{pool, spent, window, leftInQueue}` when the pool runs out with work still queued. "Run until you spend $100" is `pool_usd = 100`, `window = "run"`. |
+
+The recorded Act 7 (13 October 2026) is `demo/recordings/triggers/`: `act7.json`, the ticket
+watch's console and the pool console.
+
+**Say:** humans approve classes of change, and here the approval moves to where people already
+work: a listed approver sets a label on a ticket and that is the approval, so the intake runs
+headless on the ticket (`shape.sh --issue N --approved-by LOGIN`), writes the spec with
+`status = "approved"`, `approved_by` the approver and `trigger = "ticket:N"`, and the normal
+dispatch path takes it. If intake finds open questions the spec stays a draft, and the questions
+go back on the ticket only when `comment = true`. The schedule is maintenance nobody has to
+remember. The pool is the number the person who owns the money says, repeated back, and it
+combines with the other two as a hard stop. And one file beats all three: `touch runs/HALT`
+and nothing starts, however many tickets, entries or dollars say otherwise; `rm runs/HALT`
+resumes. Running tasks finish within their own caps either way.
+
+Live, the watch is one long-running command, or the systemd unit in `harness/systemd/`:
+
+```
+harness/bin/dispatch.sh --watch               # every minute: halt flag, due schedule entries, tickets at poll_minutes, the pool
+harness/bin/dispatch.sh --pool-usd 100        # one wake-up that stops starting work when $100 is spent
+harness/bin/intake.sh --issue 5               # the intake check on the specs the ticket watch wrote for issue #5
+touch runs/HALT                               # stop starting work; rm runs/HALT resumes
+python3 -m unittest discover -s harness/tests # the cron matcher, the pool accounting, the ticket rule, the schedule
+```
+
+The ticket watch is off in this fork's configuration (`enabled = false`) so that a rehearsal
+never shapes a spec from a ticket by surprise; the dry run reads the fork regardless. Issue #5
+on the fork mirrors upstream #431 (`intcomma` and scientific notation) and carries the label,
+set by the fork's owner; the fork's issues were enabled for it. Nothing here reads, labels or
+comments on upstream.
+
+**Fallback (1 minute):** `demo/run-demo.sh --dry-run --acts 7` replays the recording;
+`cat demo/recordings/triggers/watch-tickets.txt demo/recordings/triggers/dispatch-pool.txt`
+shows the two consoles.
+
 ### If there is time, or questions: the queue loop, recorded
 
 One real dispatcher wake-up (`demo/recordings/dispatch-wakeup.log`) took the two approved
@@ -429,6 +486,7 @@ Any step can fall back to the recorded run, made on 12 October 2026 with this ex
 | 0 | `demo/assess.md` is a file; the onboarding is `git log`, as in the step. The rule is `demo/ruleset.json`; `gh ruleset view 24964704 -R acn-yogi/humanize` reads it live. |
 | 0b | `demo/run-demo.sh --dry-run --acts 0b` replays the recorded guardrails and probes from `demo/recordings/guardrails/act0b.json`; `cat demo/recordings/guardrails/report.txt` is the probe session's report. |
 | 7 | `cat demo/recordings/shape/console.log` and the proposals beside it. |
+| 8 | `demo/run-demo.sh --dry-run --acts 7` replays the recorded triggers from `demo/recordings/triggers/act7.json`; the two consoles sit beside it. |
 
 The recorded run is in `demo/recordings/t-01M4RYVYEG6H31MRD8C2N01K04/`: `console.log`, `spec.md`,
 `prompt.md`, `transcript.jsonl` (the worker), `review-transcript.jsonl`, `checks.log`,
@@ -480,7 +538,7 @@ Common live failures and the fix:
 
 ## The scripted run: `demo/run-demo.sh`
 
-The steps above are the hand-driven demo. `demo/run-demo.sh` is the same material as seven
+The steps above are the hand-driven demo. `demo/run-demo.sh` is the same material as eight
 acts a script drives, plus Act 0b between Act 0 and Act 1, each act emitting its milestones to
 `demo/live/events.jsonl` and `demo/live/state.json` as they happen (shape:
 `demo/live/schema.json`, checked by `demo/live/validate.py`) for the player to show. The
@@ -504,6 +562,7 @@ demo/run-demo.sh --reset                                         # close the dem
 | 4 Autonomy earned | `prove.sh --k 3 --record` on the held-back docs spec, graduation committed, the same spec run for real and merged by policy, then a packaging spec that stops for a person | `proof.run`, `class.graduated`, `pr.mergedByPolicy`, `pr.stoppedForPerson` | about 5 tasks |
 | 5 The harness fixes itself | replayed from the real PR #2 record: the reviewer's finding, `harness/cases/manifest-flag.json`, the `flags.ts` commit, `harness/bin/cases.sh` | `harness.bugFound`, `harness.caseRecorded`, `harness.fixShipped`, `harness.casePasses` | none |
 | 6 Ready to release | `harness/lib/verdict.py`: hard gates over the merged changes (packet, checks, scope, review, route) and the fork's CI | `verdict.ready` or `verdict.notReady`, `verdict.handedOff` | none |
+| 7 Triggers | the `[triggers]` block as configured, `watch-tickets.sh --dry-run` against the fork (which issues would start work and why), the schedule entries with their next fire times, `dispatch.sh --dry-run --pool-usd 1` for the pool arithmetic | `trigger.configured`, `trigger.ticket.matched`, `trigger.schedule.due`, `trigger.budget.exhausted` | none (nothing runs; the recording is `demo/recordings/triggers/act7.json`) |
 
 Every act ends with `act.summary` (tasks, PRs, spend, human prompts). `--budget` is the
 driver's hard stop for the whole run, over Claude Code's per-session caps. Acts are idempotent
@@ -525,7 +584,9 @@ driver; Acts 2, 3, 4 and 6 run live only on the person's approval, which was giv
 
 ```
 harness/bin/dispatch.sh                      # one wake-up: up to 3 approved specs, 2 at a time
-harness/bin/dispatch.sh --every 30           # the queue loop on a timer (or harness/systemd/)
+harness/bin/dispatch.sh --watch              # the triggers: schedule entries, ticket watch, pool; halt with runs/HALT (or harness/systemd/)
+harness/bin/dispatch.sh --dry-run --pool-usd 1                    # the pool arithmetic, no spend
+harness/bin/watch-tickets.sh --dry-run       # which of the fork's issues would start work, and why
 harness/bin/workbench.sh specs/0002-bugfix-precisedelta-sign.md   # fail first, per PR
 harness/bin/workbench.sh specs/0004-cli-entrypoint.md            # high risk: stops for a person
 harness/bin/prove.sh specs/0001-docs-local-testing.md --k 3       # pass^3
