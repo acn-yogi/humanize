@@ -33,8 +33,8 @@ fi
 names="$(env | grep -iE '^[^=]*(token|api_key|secret|password|credential|gh_)[^=]*=' | cut -d= -f1 | sort)"
 own="$(grep '^CLAUDE_CODE_' <<< "$names" | paste -sd, -)"
 theirs="$(grep -v '^CLAUDE_CODE_' <<< "$names" | grep -v '^$' | paste -sd, -)"
-if [ -z "$theirs" ]; then say env-tokens "none of the person's: env | grep -i token finds no model, GitHub or other credential${own:+ (Claude Code's own per-session: ${own})}"
-else say env-tokens "VISIBLE: ${theirs}${own:+ (and Claude Code's own: ${own})}"; fi
+if [ -z "$theirs" ]; then say env-tokens "none that belong to the person: env | grep -i token finds no model, GitHub or other credential${own:+ (per-session variables of Claude Code itself: ${own})}"
+else say env-tokens "VISIBLE: ${theirs}${own:+ (and per-session variables of Claude Code itself: ${own})}"; fi
 
 found=0
 for f in /mnt/*/Users/*/.claude/.credentials.json "${HOME}/.claude/.credentials.json" "${HOME}/.ssh/id_ed25519" "${HOME}/.ssh/id_rsa"; do
