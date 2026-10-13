@@ -91,6 +91,15 @@ def main(argv: list[str]) -> int:
                 check(ev.get("data"), schema[key], f"events.jsonl:{n}.data", problems)
                 if ev.get("act") != 0 or (ev.get("data") or {}).get("part") != "b":
                     problems.append(f"events.jsonl:{n}: {ev['id']} must carry act 0 and data.part \"b\" (Act 0b)")
+            # Act 7's trigger milestones carry a fixed data shape too.
+            if isinstance(ev, dict) and ev.get("kind") == "milestone" and str(ev.get("id", "")).startswith("trigger."):
+                need = {"trigger.configured": ["ticket", "schedule", "budget"], "trigger.ticket.matched": ["number", "approver", "reason"],
+                        "trigger.schedule.due": ["cron", "tz", "what", "due"], "trigger.budget.exhausted": ["pool", "spent", "window", "leftInQueue"]}.get(ev["id"], [])
+                for key in need:
+                    if key not in (ev.get("data") or {}):
+                        problems.append(f"events.jsonl:{n}: {ev['id']} data is missing {key}")
+                if ev.get("act") != 7:
+                    problems.append(f"events.jsonl:{n}: {ev['id']} must carry act 7 (Triggers)")
             events.append(ev)
         for a, b in zip(events, events[1:]):
             if isinstance(a, dict) and isinstance(b, dict) and str(a.get("ts")) > str(b.get("ts")):
@@ -115,8 +124,8 @@ def main(argv: list[str]) -> int:
                 if [m.get("id") for m in ms] != [m.get("id") for m in got if isinstance(m, dict)]:
                     problems.append("state.json.milestones: not the last milestone events of events.jsonl in order")
                 acts = state.get("acts") or []
-                if [a.get("n") for a in acts if isinstance(a, dict)] != list(range(7)):
-                    problems.append("state.json.acts: expected one row per act 0 to 6, in order")
+                if [a.get("n") for a in acts if isinstance(a, dict)] != list(range(8)):
+                    problems.append("state.json.acts: expected one row per act 0 to 7, in order")
                 # Every guardrail a probe reported on must have been defined first, and the state row must agree
                 # with the last probe milestone for it.
                 defined = {e["data"].get("name") for e in events if isinstance(e, dict) and e.get("id") == "guardrail.defined" and isinstance(e.get("data"), dict)}

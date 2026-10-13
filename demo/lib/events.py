@@ -20,6 +20,7 @@ ACT_TITLES = {
     4: "Autonomy earned",
     5: "The harness fixes itself",
     6: "Ready to release",
+    7: "Triggers",
 }
 
 # Act 0 has a second part, 0b: it runs after Act 0 and before Act 1. Its events carry act 0 and
@@ -70,6 +71,12 @@ class Feed:
             self.state["mode"] = mode
             self.state["budget"]["cap"] = cap
             self.state.setdefault("guardrails", [])
+            # A state file from before an act was added gains its row, so the acts stay 0 to N in order.
+            have = {a["n"] for a in self.state["acts"]}
+            for n, t in ACT_TITLES.items():
+                if n not in have:
+                    self.state["acts"].append({"n": n, "title": t, "status": "pending", "started": None, "ended": None, "summary": None})
+            self.state["acts"].sort(key=lambda a: a["n"])
             # A resumed run keeps its spend and counters; the acts keep their status.
             for a in self.state["acts"]:
                 if a["status"] == "running":

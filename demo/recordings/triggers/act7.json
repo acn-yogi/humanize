@@ -1,0 +1,105 @@
+{
+ "v": 1,
+ "at": "2026-10-13T14:08:22Z",
+ "fork": "acn-yogi/humanize",
+ "config": {
+  "ticket": {
+   "enabled": false,
+   "label": "priority:high",
+   "approvers": [
+    "acn-yogi"
+   ],
+   "poll_minutes": 5,
+   "comment": false,
+   "source": "github"
+  },
+  "schedule": [
+   {
+    "cron": "*/30 * * * *",
+    "tz": "UTC",
+    "take": "queue",
+    "spec": null,
+    "what": "take the approved queue",
+    "due": false,
+    "next": [
+     "2026-10-13T14:30+00:00",
+     "2026-10-13T15:00+00:00"
+    ]
+   },
+   {
+    "cron": "0 6 * * 1",
+    "tz": "UTC",
+    "take": null,
+    "spec": "flaky-test-hunt",
+    "what": "enqueue recurring spec flaky-test-hunt",
+    "due": false,
+    "next": [
+     "2026-10-19T06:00+00:00",
+     "2026-10-26T06:00+00:00"
+    ]
+   },
+   {
+    "cron": "0 6 1 * *",
+    "tz": "UTC",
+    "take": null,
+    "spec": "docstring-sweep",
+    "what": "enqueue recurring spec docstring-sweep",
+    "due": false,
+    "next": [
+     "2026-11-01T06:00+00:00",
+     "2026-12-01T06:00+00:00"
+    ]
+   }
+  ],
+  "budget": {
+   "pool_usd": 0,
+   "window": "run"
+  },
+  "halt": "runs/HALT",
+  "perTaskCap": 3.0
+ },
+ "tickets": {
+  "fork": "acn-yogi/humanize",
+  "label": "priority:high",
+  "approvers": "acn-yogi",
+  "enabled": false,
+  "comment": false,
+  "dryRun": true,
+  "openIssues": 1,
+  "pullRequestsSkipped": 3,
+  "rows": [
+   {
+    "number": 5,
+    "title": "intcomma returns scientific notation for large floats",
+    "url": "https://github.com/acn-yogi/humanize/issues/5",
+    "state": "open",
+    "labels": [
+     "priority:high"
+    ],
+    "matched": true,
+    "action": "start",
+    "reason": "priority:high added by acn-yogi (approver) at 2026-10-13T13:53:57Z",
+    "approver": "acn-yogi",
+    "labeledAt": "2026-10-13T13:53:57Z",
+    "trigger": "ticket:5"
+   }
+  ],
+  "wouldStart": [
+   5
+  ]
+ },
+ "ticketsConsole": "ticket watch: acn-yogi/humanize open issues with label priority:high; approvers: acn-yogi; comment on not-ready: false; [triggers.ticket] enabled = false (dry run: reads the fork, writes nothing, posts nothing)\nread 1 open issue(s) from acn-yogi/humanize; 3 pull request(s) in the same list skipped (not tickets)\n  START  #5  intcomma returns scientific notation for large floats  priority:high added by acn-yogi (approver) at 2026-10-13T13:53:57Z\nwould start 1 task(s): intake runs headless on each issue (shape.sh --issue), the spec is approved by the login that set the label, trigger ticket:<number>\n",
+ "poolConsole": "phase: 2 (autonomous by class), from harness/config.toml\nqueue: 10 spec(s); this wake-up starts at most 3, 2 at a time\n  RUN   0001-docs-local-testing                 docs       mechanical: joins approved batch docs-2026-10; one approval merges the batch\n  RUN   0002-bugfix-precisedelta-sign           bugfix     per PR: a person reviews the PR (class bugfix)\n  WAIT  0003-feature-natural-list-conjunction   feature    intent not approved (draft): no spend until a person approves the spec\n  RUN   0004-cli-entrypoint                     packaging  HIGH RISK (package manifest, class packaging): runs, then stops for a person at the PR\n  WAIT  0005-feature-naturalday-weekday-future  feature    intent not approved (draft): no spend until a person approves the spec\n  WAIT  0006-feature-naturalday-weekday-past    feature    intent not approved (draft): no spend until a person approves the spec\n  WAIT  0007-docs-naturalday-weekdays           docs       intent not approved (draft): no spend until a person approves the spec\n  WAIT  0008-feature-intcomma-expand-floats     feature    intent not approved (draft): no spend until a person approves the spec\n  WAIT  0009-feature-intcomma-expand-edges      feature    intent not approved (draft): no spend until a person approves the spec\n  WAIT  0010-docs-intcomma-expand               docs       intent not approved (draft): no spend until a person approves the spec\npool: $1.00 (window run), spent $0.00 over 0 task(s), left $1.00, per-task cap $3.00: 0 more task(s) fit\nbudget-exhausted: the pool cannot pay for one more task; 3 approved spec(s) wait. A live wake-up writes the budget-exhausted row to runs/ledger.jsonl and starts nothing.\n",
+ "pool": {
+  "pool": 1.0,
+  "window": "run",
+  "spent": 0.0,
+  "rows": 0,
+  "left": 1.0,
+  "perTaskCap": 3.0,
+  "fits": 0,
+  "leftInQueue": 3,
+  "exhausted": true
+ },
+ "halted": false
+}

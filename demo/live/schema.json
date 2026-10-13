@@ -1,5 +1,5 @@
 {
-  "$comment": "The demo's live feed. demo/run-demo.sh appends one event per line to demo/live/events.jsonl and rewrites demo/live/state.json on every event. The player reads both. demo/live/validate.py checks files against this schema (a JSON Schema subset: type, enum, required, properties, items, minimum, maximum, additionalProperties). Act 0b (Build the workbench) runs between Act 0 and Act 1: its events carry act 0 and data.part \"b\"; its row is state.acts[0].parts.b. Its milestones are guardrail.defined (data: name, enforcer, file, rule, part), guardrail.probed (data: name, probe, result refused|allowed, evidence, part) and workbench.built (the summary). Every later act names a guardrail by the same data.name.",
+  "$comment": "The demo's live feed. demo/run-demo.sh appends one event per line to demo/live/events.jsonl and rewrites demo/live/state.json on every event. The player reads both. demo/live/validate.py checks files against this schema (a JSON Schema subset: type, enum, required, properties, items, minimum, maximum, additionalProperties). Act 0b (Build the workbench) runs between Act 0 and Act 1: its events carry act 0 and data.part \"b\"; its row is state.acts[0].parts.b. Its milestones are guardrail.defined (data: name, enforcer, file, rule, part), guardrail.probed (data: name, probe, result refused|allowed, evidence, part) and workbench.built (the summary). Every later act names a guardrail by the same data.name. Act 7 (Triggers) shows what starts the work: trigger.configured (data: ticket, schedule, budget, halt), trigger.ticket.matched (data: number, title, approver, label, reason), trigger.schedule.due (data: cron, tz, what, due, next) and trigger.budget.exhausted (data: pool, spent, window, perTaskCap, leftInQueue).",
   "guardrailEnforcers": ["managed settings", "native sandbox", "pack mod", "stop hook", "fresh clone", "reviewer settings", "git remote", "ruleset"],
   "guardrailDefined": {
     "type": "object",
@@ -28,7 +28,7 @@
     "required": ["ts", "act", "kind", "id", "title", "detail", "level", "data"],
     "properties": {
       "ts": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}" },
-      "act": { "type": "integer", "minimum": 0, "maximum": 6 },
+      "act": { "type": "integer", "minimum": 0, "maximum": 7 },
       "kind": { "type": "string", "enum": ["milestone", "log", "counter", "state"] },
       "id": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+$" },
       "title": { "type": "string" },
@@ -46,6 +46,7 @@
     "proof.run", "class.graduated", "class.notGraduated", "harness.bugFound", "harness.caseRecorded",
     "harness.fixShipped", "harness.casePasses", "verdict.ready", "verdict.notReady", "verdict.handedOff",
     "guardrail.defined", "guardrail.probed", "workbench.built",
+    "trigger.configured", "trigger.ticket.matched", "trigger.schedule.due", "trigger.budget.exhausted",
     "act.summary", "budget.stop", "demo.reset"
   ],
   "state": {
@@ -79,7 +80,7 @@
           "type": "object",
           "required": ["n", "title", "status", "started", "ended"],
           "properties": {
-            "n": { "type": "integer", "minimum": 0, "maximum": 6 },
+            "n": { "type": "integer", "minimum": 0, "maximum": 7 },
             "title": { "type": "string" },
             "status": { "type": "string", "enum": ["pending", "running", "done", "skipped"] },
             "started": { "type": ["string", "null"] },
@@ -134,7 +135,7 @@
             "status": { "type": "string", "enum": ["created", "running", "checks", "review", "routed", "pr", "merged", "held", "failed"] },
             "pr": { "type": ["string", "null"] },
             "cost": { "type": "number", "minimum": 0 },
-            "act": { "type": "integer", "minimum": 0, "maximum": 6 }
+            "act": { "type": "integer", "minimum": 0, "maximum": 7 }
           }
         }
       },

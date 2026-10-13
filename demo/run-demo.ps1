@@ -3,6 +3,7 @@
 #
 #   pwsh -NoProfile -File demo\run-demo.ps1 --dry-run --serve
 #   pwsh -NoProfile -File demo\run-demo.ps1 --acts 0,1 --ask "intword should carry to the next unit" --budget 5
+#   pwsh -NoProfile -File demo\run-demo.ps1 --acts 7          # the triggers: config, ticket watch, schedule, pool; no spend
 #
 # Model credentials: ANTHROPIC_API_KEY in this session is passed through WSLENV; otherwise the
 # Windows Claude Code login is borrowed for the run (WORKBENCH_AUTH=windows-login).

@@ -9,7 +9,7 @@
 | `schema.json` | the shape of both, and the list of milestone ids |
 | `validate.py` | `python3 demo/live/validate.py` checks the two files against the schema |
 | `console/` | the console log of every workbench, shaper and proving run the driver started |
-| `assess.json`, `batch-plan.json`, `verdict.json` | Act 0, Act 2 and Act 6 outputs |
+| `assess.json`, `batch-plan.json`, `verdict.json`, `triggers.json` | Act 0, Act 2, Act 6 and Act 7 outputs |
 | `generated.txt` | the files the driver generated (specs, intents, the trap), so `--reset` can remove them |
 
 Everything but the schema, the validator and this page is ignored by git and cleared by

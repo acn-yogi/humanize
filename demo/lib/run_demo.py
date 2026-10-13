@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
-"""The demo driver: seven acts (and Act 0b) on a real fork, each emitting milestones as they happen.
+"""The demo driver: eight acts (and Act 0b) on a real fork, each emitting milestones as they happen.
 
 Called by demo/run-demo.sh (WSL bash), which checks the environment first. Every act is
 idempotent and resumable: state.json remembers what ran. Writes demo/live/events.jsonl and
 demo/live/state.json in the shape of demo/live/schema.json. Standard library only.
 
-    run_demo.py [--repo URL] [--acts 0,0b,1,2] [--dry-run] [--reset] [--budget USD] [--serve]
+    run_demo.py [--repo URL] [--acts 0,0b,1,2,7] [--dry-run] [--reset] [--budget USD] [--serve]
                 [--ask TEXT | --issue N] [--approve-batch] [--yes] [--concurrency 4]
                 [--batch-cap 20] [--pace SEC] [--port 8765] [--no-archive] [--live-dir DIR]
 
 Act 0b, "Build the workbench", sits between Act 0 and Act 1: it names every guardrail the
 onboarding installed (the file and the rule) and proves each one live with a probe that tries
 to break it and is refused. Its events carry act 0 and data.part "b".
+
+Act 7, "Triggers", shows what starts the work: the [triggers] block in harness/config.toml, the
+ticket watch's dry run against the fork, the schedule entries and their next fire times, and
+the budget pool's arithmetic from a dispatcher dry run with a one dollar pool. No spend.
 """
 
 from __future__ import annotations
@@ -47,7 +51,7 @@ GENERATED = LIVE / "generated.txt"
 TRAP_SPEC_SLUG = "docs-contributing-notes"
 PACKAGING_SPEC_SLUG = "packaging-typed-classifier"
 DIM_MAX = 50
-ALL_ACTS = ["0", "0b", "1", "2", "3", "4", "5", "6"]
+ALL_ACTS = ["0", "0b", "1", "2", "3", "4", "5", "6", "7"]
 
 # The guardrails Act 0b defines and probes. Every later act names one by exactly this name
 # (the trap's denials, a stop for a person, the Stop hook bouncing a finish), so the audience
@@ -1657,6 +1661,131 @@ not say so to the index: the `Typing :: Typed` trove classifier is missing. Add 
         f.emit("milestone", "verdict.handedOff", "Handed to the client's release process", "The fork's release.yml builds and inspects the package on every push to main: that is the dark deploy. A tagged release is the flag flip, and that stays a person's decision.", "key", {"verdict": v["verdict"]})
         self.act_summary(6, {"verdict": v["verdict"]})
 
+    # ---- Act 7: triggers, what starts the work (no spend) -------------------------------------
+    def act7(self) -> None:
+        f = self.feed
+        if self.dry:
+            self.act7_dry()
+            return
+        record: dict = {"v": 1, "at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "fork": self.fork}
+        # (a) The configuration: the three triggers as config.toml holds them, and the halt flag.
+        self.config = tomllib.loads((ROOT / "harness/config.toml").read_text(encoding="utf-8"))
+        trig = self.config.get("triggers") or {}
+        ticket = {"enabled": False, "label": "priority:high", "approvers": [], "poll_minutes": 5, "comment": False, **(trig.get("ticket") or {})}
+        budget = {"pool_usd": 0, "window": "run", **(trig.get("budget") or {})}
+        schedule = sh([sys.executable, str(ROOT / "harness/lib/schedule.py"), "entries", str(ROOT / "harness")])
+        entries = json.loads(schedule)
+        caps = self.config["caps"]
+        record["config"] = {"ticket": ticket, "schedule": entries, "budget": budget, "halt": "runs/HALT", "perTaskCap": caps["max_budget_usd"]}
+        self.trigger_configured(record["config"], dry=False)
+        # (b) The ticket watch, dry: which of the fork's issues would start work and why. Reads GitHub, writes nothing.
+        out = sh(["bash", str(ROOT / "harness/bin/watch-tickets.sh"), "--dry-run", "--json"], check=False)
+        text = sh(["bash", str(ROOT / "harness/bin/watch-tickets.sh"), "--dry-run"], check=False)
+        (self.console_dir / "act7-watch-tickets.log").write_text(text, encoding="utf-8")
+        try:
+            tickets = json.loads(out.strip().splitlines()[-1])
+        except (json.JSONDecodeError, IndexError):
+            tickets = None
+            f.warn("tickets.unreadable", "watch-tickets.sh --dry-run gave no JSON (is gh signed in, are issues on for the fork?)", out[-300:])
+        record["tickets"] = tickets
+        record["ticketsConsole"] = text
+        self.trigger_tickets(tickets, dry=False)
+        # (c) The schedule: each entry, due now or not, and when it fires next.
+        self.trigger_schedule(entries, dry=False)
+        # (d) The pool: a dispatcher dry run with a one dollar pool against a three dollar per-task cap. No spend.
+        pool_text = sh(["bash", str(ROOT / "harness/bin/dispatch.sh"), "--dry-run", "--pool-usd", "1"], check=False)
+        (self.console_dir / "act7-dispatch-pool.log").write_text(pool_text, encoding="utf-8")
+        record["poolConsole"] = pool_text
+        record["pool"] = self.trigger_pool(pool_text, dry=False)
+        record["halted"] = (RUNS / "HALT").exists()
+        (LIVE / "triggers.json").write_text(json.dumps(record, indent=1, ensure_ascii=False), encoding="utf-8")
+        self.act_summary(7, {"ticketsMatched": len((tickets or {}).get("wouldStart") or []), "scheduleEntries": len(entries),
+                             "poolExhausted": bool((record["pool"] or {}).get("exhausted")), "halted": record["halted"]})
+
+    def trigger_configured(self, cfg: dict, dry: bool) -> None:
+        f = self.feed
+        t, b, entries = cfg["ticket"], cfg["budget"], cfg["schedule"]
+        pool = f"${float(b.get('pool_usd') or 0):.0f} per {b.get('window', 'run')}" if float(b.get("pool_usd") or 0) > 0 else "none (unlimited within the caps)"
+        title = f"Triggers configured: ticket watch {'on' if t.get('enabled') else 'off'}, {len(entries)} schedule entr{'y' if len(entries) == 1 else 'ies'}, budget pool {pool}"
+        detail = (f"harness/config.toml [triggers]. Ticket watch: label {t.get('label')} set by one of {', '.join(t.get('approvers') or []) or 'nobody listed'}, every {t.get('poll_minutes')} min, comment on not-ready {str(t.get('comment', False)).lower()}. "
+                  f"Schedule: {'; '.join(e['cron'] + ' ' + e['tz'] + ': ' + e['what'] for e in entries)}. "
+                  f"Pool: {pool}; per-task cap ${float(cfg.get('perTaskCap', 0)):.2f}. The halt flag ({cfg.get('halt', 'runs/HALT')}) beats every trigger; a trigger only puts work in the queue, the workbench and the sandboxed run are unchanged." + (" (recorded)" if dry else ""))
+        f.emit("milestone", "trigger.configured", title, detail, "key", {**cfg, "dry": dry})
+
+    def trigger_tickets(self, tickets: dict | None, dry: bool) -> None:
+        f = self.feed
+        if not tickets:
+            f.emit("milestone", "trigger.ticket.matched", "Ticket watch: the fork could not be read" + (" (recorded)" if dry else ""), "No issue matched because none was read; nothing starts. Live, the next poll tries again.", "warn",
+                   {"number": 0, "approver": None, "reason": "fork unreadable", "label": "", "title": "", "dry": dry})
+            return
+        f.log("tickets.read", f"Ticket watch read {tickets.get('openIssues', 0)} open issue(s) on {tickets.get('fork')}; {tickets.get('pullRequestsSkipped', 0)} pull request(s) skipped (not tickets)",
+              f"label {tickets.get('label')}, approvers {tickets.get('approvers')}, enabled {tickets.get('enabled')}" + ("; dry run: reads the fork, writes nothing" if tickets.get("dryRun") else ""))
+        for r in tickets.get("rows") or []:
+            if r.get("action") == "start":
+                f.emit("milestone", "trigger.ticket.matched", f"Ticket matched: #{r['number']} {r.get('title', '')[:70]}",
+                       f"{r.get('reason')}. The approver's label is the approval: live, the intake runs headless on the issue (shape.sh --issue {r['number']}), the spec is approved by {r.get('approver')} with trigger ticket:{r['number']}, and the normal dispatch path takes it. One issue, one task." + (" (recorded)" if dry else " (dry run: nothing written)"),
+                       "key", {"number": r["number"], "title": r.get("title", ""), "url": r.get("url", ""), "approver": r.get("approver"), "label": tickets.get("label"), "reason": r.get("reason"), "trigger": r.get("trigger"), "dry": dry})
+            else:
+                f.log("tickets.skip", f"Ticket #{r.get('number')} skipped: {r.get('reason')}", r.get("title", "")[:100], number=r.get("number"), reason=r.get("reason"))
+        if not tickets.get("wouldStart"):
+            f.emit("milestone", "trigger.ticket.matched", "Ticket watch: no issue qualifies right now" + (" (recorded)" if dry else ""),
+                   f"{len(tickets.get('rows') or [])} open issue(s) read; none carries {tickets.get('label')} set by an approver that has not already run. Nothing starts.", "info",
+                   {"number": 0, "approver": None, "reason": "no qualifying issue", "label": tickets.get("label"), "title": "", "dry": dry})
+
+    def trigger_schedule(self, entries: list[dict], dry: bool) -> None:
+        f = self.feed
+        for e in entries:
+            nxt = (e.get("next") or [None])[0]
+            when = nxt.replace("T", " ")[:16] + " " + e.get("tz", "UTC") if nxt else "never within a year"
+            title = f"Schedule entry {'due now' if e.get('due') else 'due next ' + when}: {e.get('what')} ({e.get('cron')})"
+            detail = f"cron {e.get('cron')} in {e.get('tz')}. " + ("Live, --watch wakes the dispatcher now, which takes the approved queue up to the caps." if e.get("take") == "queue"
+                     else f"Live, --watch copies harness/recurring/{e.get('spec')}.md to specs/ as one dated spec, approved by the person who approved the recurring work, trigger schedule:{e.get('spec')}:<date>, and the next queue wake-up runs it.") +                      " The halt flag and the queue caps still apply." + (" (recorded)" if dry else "")
+            f.emit("milestone", "trigger.schedule.due", title, detail, "key" if e.get("due") else "info",
+                   {"cron": e.get("cron"), "tz": e.get("tz"), "what": e.get("what"), "take": e.get("take"), "spec": e.get("spec"), "due": bool(e.get("due")), "next": e.get("next") or [], "dry": dry})
+
+    def trigger_pool(self, text: str, dry: bool) -> dict | None:
+        f = self.feed
+        pool_line = next((l for l in text.splitlines() if l.startswith("pool:")), "")
+        exhausted_line = next((l for l in text.splitlines() if l.startswith("budget-exhausted:")), "")
+        would = next((l for l in text.splitlines() if l.startswith("would start:")), "")
+        m = re.search(r"pool: \$([\d.]+) \(window (\w+)\), spent \$([\d.]+) over (\d+) task\(s\), left \$([\d.]+), per-task cap \$([\d.]+): (\d+) more task\(s\) fit", pool_line)
+        for line in text.splitlines():
+            if line.strip():
+                f.log("console.line", line.rstrip()[:300], "")
+        if not m:
+            f.warn("pool.unreadable", "dispatch.sh --dry-run --pool-usd 1 printed no pool line", text[-300:])
+            return None
+        pool = {"pool": float(m.group(1)), "window": m.group(2), "spent": float(m.group(3)), "rows": int(m.group(4)), "left": float(m.group(5)),
+                "perTaskCap": float(m.group(6)), "fits": int(m.group(7))}
+        q = re.search(r"(\d+) approved spec\(s\) wait", exhausted_line)
+        pool["leftInQueue"] = int(q.group(1)) if q else 0
+        pool["exhausted"] = pool["fits"] < 1
+        runnable = len(would.split(":", 1)[1].split()) if would else 0
+        if pool["exhausted"]:
+            f.emit("milestone", "trigger.budget.exhausted",
+                   f"Budget pool exhausted: ${pool['pool']:.2f} pool, ${pool['perTaskCap']:.2f} per-task cap, 0 tasks fit, {pool['leftInQueue']} approved spec(s) wait",
+                   f"dispatch.sh --dry-run --pool-usd 1: a task starts only while one full per-task cap still fits in the pool, so a one dollar pool starts nothing against a three dollar cap. Live, the dispatcher writes a budget-exhausted row to runs/ledger.jsonl {{pool, spent, window, leftInQueue}} and running tasks finish within their own caps. The pool combines with the ticket watch and the schedule: a hard stop across all three." + (" (recorded)" if dry else " (dry run: no spend, no row)"),
+                   "key", {**pool, "dry": dry})
+        else:
+            f.emit("milestone", "trigger.budget.exhausted", f"Budget pool holds: ${pool['pool']:.2f} pool, ${pool['left']:.2f} left, {pool['fits']} task(s) fit, {runnable} would start",
+                   f"{pool_line}. {would}".strip() + (" (recorded)" if dry else ""), "info", {**pool, "dry": dry})
+        return pool
+
+    def act7_dry(self) -> None:
+        """Replays the recorded Act 7 (demo/recordings/triggers/act7.json, written by a live Act 7)."""
+        f = self.feed
+        rec = REC / "triggers" / "act7.json"
+        if not rec.exists():
+            raise Stop(f"no recording for Act 7 at {rec.relative_to(ROOT)}: run Act 7 live once (it spends nothing)")
+        record = json.loads(rec.read_text(encoding="utf-8"))
+        self.trigger_configured(record["config"], dry=True)
+        self.trigger_tickets(record.get("tickets"), dry=True)
+        self.trigger_schedule(record["config"].get("schedule") or [], dry=True)
+        pool = self.trigger_pool(record.get("poolConsole") or "", dry=True)
+        f.log("halt.flag", f"Halt flag runs/HALT {'present' if record.get('halted') else 'absent'} at the recording: {'nothing starts' if record.get('halted') else 'the triggers may start work'}", "touch runs/HALT stops every trigger; rm runs/HALT resumes.")
+        self.act_summary(7, {"ticketsMatched": len((record.get("tickets") or {}).get("wouldStart") or []), "scheduleEntries": len(record["config"].get("schedule") or []),
+                             "poolExhausted": bool((pool or {}).get("exhausted")), "halted": bool(record.get("halted"))})
+
     # ---- reset, serve, archive ----------------------------------------------------------------
     def reset(self) -> None:
         f = self.feed
@@ -1746,7 +1875,7 @@ not say so to the index: the `Typing :: Typed` trove classifier is missing. Add 
         day = dt.date.today().isoformat()
         dest = DEMO / "live-runs" / day
         dest.mkdir(parents=True, exist_ok=True)
-        for name in ("events.jsonl", "state.json", "assess.json", "guardrails.json", "batch-plan.json", "verdict.json"):
+        for name in ("events.jsonl", "state.json", "assess.json", "guardrails.json", "batch-plan.json", "verdict.json", "triggers.json"):
             if (LIVE / name).exists():
                 shutil.copy2(LIVE / name, dest / name)
         if self.console_dir.exists():
@@ -1775,7 +1904,7 @@ not say so to the index: the `Typing :: Typed` trove classifier is missing. Add 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--repo", default="https://github.com/python-humanize/humanize")
-    ap.add_argument("--acts", default=",".join(ALL_ACTS), help="acts to run, in order: 0 to 6, and 0b for Build the workbench")
+    ap.add_argument("--acts", default=",".join(ALL_ACTS), help="acts to run, in order: 0 to 7, and 0b for Build the workbench")
     ap.add_argument("--live-dir", default=str(LIVE), help="where the feed is written (default demo/live)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--reset", action="store_true")
@@ -1803,7 +1932,7 @@ def main(argv: list[str]) -> int:
     GENERATED = LIVE / "generated.txt"
     acts = [x.lower() for x in re.split(r"[,\s]+", a.acts.strip()) if x != ""]
     if any(x not in ALL_ACTS for x in acts):
-        print("--acts takes 0 to 6, and 0b", file=sys.stderr)
+        print("--acts takes 0 to 7, and 0b", file=sys.stderr)
         return 2
     demo = Demo(a)
     if a.reset:

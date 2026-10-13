@@ -1,0 +1,4 @@
+ticket watch: acn-yogi/humanize open issues with label priority:high; approvers: acn-yogi; comment on not-ready: false; [triggers.ticket] enabled = false (dry run: reads the fork, writes nothing, posts nothing)
+read 1 open issue(s) from acn-yogi/humanize; 3 pull request(s) in the same list skipped (not tickets)
+  START  #5  intcomma returns scientific notation for large floats  priority:high added by acn-yogi (approver) at 2026-10-13T13:53:57Z
+would start 1 task(s): intake runs headless on each issue (shape.sh --issue), the spec is approved by the login that set the label, trigger ticket:<number>
