@@ -38,3 +38,5 @@ src/*/_version.py
 
 # Workbench demo: local run output (recordings live in demo/recordings)
 runs/
+# The recordings keep their console and check logs: the replay fallback reads them.
+!demo/recordings/**/*.log

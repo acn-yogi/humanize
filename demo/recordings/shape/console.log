@@ -1,0 +1,28 @@
+20:12:23 shape s-20261013T011217: intent 0001-naturalday-weekdays on main at b69610dd56d4, pack-d812d07de777, phase 3 (self-improving, from WORKBENCH_PHASE (operator override for this command))
+20:12:36 setup: the run's Python environment, from the base commit (the shaper runs the checks it writes)
+20:12:41 loop 1 session: claude -p, model sonnet, caps 40 turns and $3.0
+20:14:16 session ended: success, 6 turns, $0.21254959999999998
+20:14:18 files: 7 written; outside scope: none
+  harness/checks/naturalday_weekday_docs.py
+  harness/checks/naturalday_weekday_future.py
+  harness/checks/naturalday_weekday_past.py
+  plans/0001-naturalday-weekdays.md
+  specs/0005-feature-naturalday-weekday-future.md
+  specs/0006-feature-naturalday-weekday-past.md
+  specs/0007-docs-naturalday-weekdays.md
+20:14:18 intake check: harness/checks/shape_output.py under bubblewrap, no network (the Stop hook ran the same)
+  PASS  3 spec file(s): 0005-feature-naturalday-weekday-future.md, 0006-feature-naturalday-weekday-past.md, 0007-docs-naturalday-weekdays.md
+  PASS  plan plans/0001-naturalday-weekdays.md, 473 words
+  PASS  0005-feature-naturalday-weekday-future: fails on today's code (exit 1): python {harness}/checks/naturalday_weekday_future.py
+  PASS  0005-feature-naturalday-weekday-future: class feature, status draft, scope src/humanize/time.py, tests/test_time.py
+  PASS  0006-feature-naturalday-weekday-past: fails on today's code (exit 1): python {harness}/checks/naturalday_weekday_past.py
+  PASS  0006-feature-naturalday-weekday-past: class feature, status draft, scope src/humanize/time.py, tests/test_time.py
+  PASS  0007-docs-naturalday-weekdays: fails on today's code (exit 1): python {harness}/checks/naturalday_weekday_docs.py
+  PASS  0007-docs-naturalday-weekdays: class docs, status draft, scope docs/time.md
+20:14:21 intake: PASS, every line held
+20:14:21 forecast: what the queue would do with the proposals (nothing runs: they are drafts)
+  WAIT  0005-feature-naturalday-weekday-future  feature  intent not approved (draft): no spend until a person approves the spec
+  WAIT  0006-feature-naturalday-weekday-past    feature  intent not approved (draft): no spend until a person approves the spec
+  WAIT  0007-docs-naturalday-weekdays           docs     intent not approved (draft): no spend until a person approves the spec
+20:14:22 done: 3 draft spec(s) for 0001-naturalday-weekdays, intake PASS, $0.21; 7 file(s) copied into the working tree, uncommitted. A person reviews them, sets status = "approved" on the specs they want, and commits.
+shape-id: s-20261013T011217

@@ -1,0 +1,38 @@
+Dispatcher forecast by phase, with an empty ledger (no spec has run), on the specs in the working tree.
+Live: WORKBENCH_PHASE=N harness/bin/dispatch.sh --dry-run (reads the base commit and runs/ledger.jsonl).
+
+== WORKBENCH_PHASE=0
+  WAIT  0001-docs-local-testing                 docs       phase 0 (assess): nothing runs until the readiness assessment is done (demo/assess.md)
+  WAIT  0002-bugfix-precisedelta-sign           bugfix     phase 0 (assess): nothing runs until the readiness assessment is done (demo/assess.md)
+  WAIT  0003-feature-natural-list-conjunction   feature    phase 0 (assess): nothing runs until the readiness assessment is done (demo/assess.md)
+  WAIT  0004-cli-entrypoint                     packaging  phase 0 (assess): nothing runs until the readiness assessment is done (demo/assess.md)
+  WAIT  0005-feature-naturalday-weekday-future  feature    phase 0 (assess): nothing runs until the readiness assessment is done (demo/assess.md)
+  WAIT  0006-feature-naturalday-weekday-past    feature    phase 0 (assess): nothing runs until the readiness assessment is done (demo/assess.md)
+  WAIT  0007-docs-naturalday-weekdays           docs       phase 0 (assess): nothing runs until the readiness assessment is done (demo/assess.md)
+
+== WORKBENCH_PHASE=1
+  RUN   0001-docs-local-testing                 docs       phase 1 (assisted): a person reviews every PR (class docs)
+  RUN   0002-bugfix-precisedelta-sign           bugfix     phase 1 (assisted): a person reviews every PR (class bugfix)
+  WAIT  0003-feature-natural-list-conjunction   feature    intent not approved (draft): no spend until a person approves the spec
+  RUN   0004-cli-entrypoint                     packaging  phase 1 (assisted): a person reviews every PR (class packaging, high risk)
+  WAIT  0005-feature-naturalday-weekday-future  feature    intent not approved (draft): no spend until a person approves the spec
+  WAIT  0006-feature-naturalday-weekday-past    feature    intent not approved (draft): no spend until a person approves the spec
+  WAIT  0007-docs-naturalday-weekdays           docs       intent not approved (draft): no spend until a person approves the spec
+
+== WORKBENCH_PHASE=2
+  RUN   0001-docs-local-testing                 docs       mechanical: joins approved batch docs-2026-10; one approval merges the batch
+  RUN   0002-bugfix-precisedelta-sign           bugfix     per PR: a person reviews the PR (class bugfix)
+  WAIT  0003-feature-natural-list-conjunction   feature    intent not approved (draft): no spend until a person approves the spec
+  RUN   0004-cli-entrypoint                     packaging  HIGH RISK (package manifest, class packaging): runs, then stops for a person at the PR
+  WAIT  0005-feature-naturalday-weekday-future  feature    intent not approved (draft): no spend until a person approves the spec
+  WAIT  0006-feature-naturalday-weekday-past    feature    intent not approved (draft): no spend until a person approves the spec
+  WAIT  0007-docs-naturalday-weekdays           docs       intent not approved (draft): no spend until a person approves the spec
+
+== WORKBENCH_PHASE=3
+  RUN   0001-docs-local-testing                 docs       mechanical: joins approved batch docs-2026-10; one approval merges the batch
+  RUN   0002-bugfix-precisedelta-sign           bugfix     per PR: a person reviews the PR (class bugfix)
+  WAIT  0003-feature-natural-list-conjunction   feature    intent not approved (draft): no spend until a person approves the spec
+  RUN   0004-cli-entrypoint                     packaging  HIGH RISK (package manifest, class packaging): runs, then stops for a person at the PR
+  WAIT  0005-feature-naturalday-weekday-future  feature    intent not approved (draft): no spend until a person approves the spec
+  WAIT  0006-feature-naturalday-weekday-past    feature    intent not approved (draft): no spend until a person approves the spec
+  WAIT  0007-docs-naturalday-weekdays           docs       intent not approved (draft): no spend until a person approves the spec

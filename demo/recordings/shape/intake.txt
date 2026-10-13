@@ -1,0 +1,9 @@
+PASS  3 spec file(s): 0005-feature-naturalday-weekday-future.md, 0006-feature-naturalday-weekday-past.md, 0007-docs-naturalday-weekdays.md
+PASS  plan plans/0001-naturalday-weekdays.md, 473 words
+PASS  0005-feature-naturalday-weekday-future: fails on today's code (exit 1): python {harness}/checks/naturalday_weekday_future.py
+PASS  0005-feature-naturalday-weekday-future: class feature, status draft, scope src/humanize/time.py, tests/test_time.py
+PASS  0006-feature-naturalday-weekday-past: fails on today's code (exit 1): python {harness}/checks/naturalday_weekday_past.py
+PASS  0006-feature-naturalday-weekday-past: class feature, status draft, scope src/humanize/time.py, tests/test_time.py
+PASS  0007-docs-naturalday-weekdays: fails on today's code (exit 1): python {harness}/checks/naturalday_weekday_docs.py
+PASS  0007-docs-naturalday-weekdays: class docs, status draft, scope docs/time.md
+{"specs": ["0005-feature-naturalday-weekday-future", "0006-feature-naturalday-weekday-past", "0007-docs-naturalday-weekdays"], "intent": "0001-naturalday-weekdays", "pass": 8, "fail": 0}

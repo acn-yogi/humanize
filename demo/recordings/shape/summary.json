@@ -1,0 +1,63 @@
+{
+  "v": 1,
+  "shapeId": "s-20261013T011217",
+  "intent": "0001-naturalday-weekdays",
+  "phase": 3,
+  "phaseSource": "WORKBENCH_PHASE (operator override for this command)",
+  "model": "sonnet",
+  "claudeCodeVersion": "2.1.296 (Claude Code)",
+  "packId": "pack-d812d07de777",
+  "baseBranch": "main",
+  "baseCommit": "b69610dd56d453ef353b4e747edc79f08029146a",
+  "startedAt": "2026-10-13T01:12:23Z",
+  "endedAt": "2026-10-13T01:14:22Z",
+  "session": {
+    "sessionId": "c55bdc18-22dd-4730-8c7c-0fb2037521b0",
+    "subtype": "success",
+    "isError": false,
+    "turns": 6,
+    "costUsd": 0.21254959999999998,
+    "denials": 0,
+    "result": "Shaping is done: the plan, three draft specs (0005 to 0007) and one check per spec are written. I ran each check from the worktree root and each fails on today's code. I also ran `harness/checks/shape_output.py` and all 8 of its checks passed.\n\nThe shape_output run showed \"exit 127\" for each fail-first check, so the check commands weren't found in that run. The fail-first results I trust are my own runs of the three checks.\n\nI also couldn't run `ruff` on the check scripts because it isn't installed in the venv.\n\n- **0005** adds `weekday=True` to `naturalday()` and names days 2 to 6 ahead by we",
+    "role": "shaper",
+    "exit": 0
+  },
+  "files": [
+    "harness/checks/naturalday_weekday_docs.py",
+    "harness/checks/naturalday_weekday_future.py",
+    "harness/checks/naturalday_weekday_past.py",
+    "plans/0001-naturalday-weekdays.md",
+    "specs/0005-feature-naturalday-weekday-future.md",
+    "specs/0006-feature-naturalday-weekday-past.md",
+    "specs/0007-docs-naturalday-weekdays.md"
+  ],
+  "scope": {
+    "harness": [],
+    "outside": []
+  },
+  "intake": {
+    "specs": [
+      "0005-feature-naturalday-weekday-future",
+      "0006-feature-naturalday-weekday-past",
+      "0007-docs-naturalday-weekdays"
+    ],
+    "intent": "0001-naturalday-weekdays",
+    "pass": 8,
+    "fail": 0,
+    "exit": 0,
+    "ok": true
+  },
+  "finish": [
+    {
+      "at": "2026-10-13T01:14:16Z",
+      "loop": "finish",
+      "result": "pass",
+      "continuation": 0,
+      "checks": 1,
+      "stopHookActive": "false"
+    }
+  ],
+  "scopeDenials": [],
+  "copiedIntoWorkingTree": 7,
+  "costUsd": 0.21254959999999998
+}
