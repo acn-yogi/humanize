@@ -679,7 +679,7 @@ class Demo:
              "rule": f"allowed_domains = {json.dumps(domains)}: every shell command Claude runs reaches these hosts and nothing else; github.com is not on the list; the checks after the session reach none.",
              "probe": "curl example.com from inside the session; curl pypi.org for contrast; git push origin HEAD:main from inside the session"},
             {"name": G_CREDS, "enforcer": "native sandbox", "file": ".claude/workbench/settings.template.json sandbox.credentials.envVars, harness/lib/auth.sh",
-             "rule": f"envVars deny: {', '.join(env_deny)}; the model token is read at run time and never written; GitHub credentials stay on the host (publish.sh runs gh outside the session); the decoy secret file lives in a folder the sandbox hides.",
+             "rule": f"envVars deny: {', '.join(env_deny)}, plus every token-like variable in the operator's own shell (wb_settings adds them by name); the model token is read at run time and never written; GitHub credentials stay on the host (publish.sh runs gh outside the session); the decoy secret file lives in a folder the sandbox hides.",
              "probe": "env | grep -i token inside the session; cat the decoy secret file; the Read tool on the decoy secret file"},
             {"name": G_POLICY, "enforcer": "pack mod", "file": "harness/pack/workbench-policy/hooks/register.ts",
              "rule": f"file tools may only touch files under the worktree, by their real path (links and .. resolved); {denied_tools} and mcp__* are not available in a workbench; no tool touches .git. Best effort: a hook that fails is skipped, so every rule here is also held by the deny rules or the sandbox.",

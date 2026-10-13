@@ -28,8 +28,13 @@ if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}${ANTHROPIC_API_KEY:-}${ANTHROPIC_AUTH_TOKE
 else
   say token "hidden from shell commands"
 fi
-n="$(env | grep -iEc '^[^=]*(token|api_key|secret|password|gh_)[^=]*=' || true)"
-if [ "${n:-0}" = 0 ]; then say env-tokens "none: env | grep -i token finds nothing"; else say env-tokens "VISIBLE: ${n} token-like variable(s): $(env | grep -iE '^[^=]*(token|api_key|secret|password|gh_)[^=]*=' | cut -d= -f1 | paste -sd, -)"; fi
+# Every token-like variable name. Claude Code's own CLAUDE_CODE_* variables (its per-session
+# messaging token) are its, not the person's, and are named separately so nothing is hidden.
+names="$(env | grep -iE '^[^=]*(token|api_key|secret|password|credential|gh_)[^=]*=' | cut -d= -f1 | sort)"
+own="$(grep '^CLAUDE_CODE_' <<< "$names" | paste -sd, -)"
+theirs="$(grep -v '^CLAUDE_CODE_' <<< "$names" | grep -v '^$' | paste -sd, -)"
+if [ -z "$theirs" ]; then say env-tokens "none of the person's: env | grep -i token finds no model, GitHub or other credential${own:+ (Claude Code's own per-session: ${own})}"
+else say env-tokens "VISIBLE: ${theirs}${own:+ (and Claude Code's own: ${own})}"; fi
 
 found=0
 for f in /mnt/*/Users/*/.claude/.credentials.json "${HOME}/.claude/.credentials.json" "${HOME}/.ssh/id_ed25519" "${HOME}/.ssh/id_rsa"; do

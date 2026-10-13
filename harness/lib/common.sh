@@ -81,14 +81,19 @@ event() {
 # the worktree, credential folders denied to tools and hidden from the sandbox, network only to
 # the spec's allowed hosts, and the hooks pointed at the trusted harness copy.
 wb_settings() {
-  local T="$1" tdir="$2" plan="$3" work="$4" extra="$5" with_hooks="$6" secrets domains
+  local T="$1" tdir="$2" plan="$3" work="$4" extra="$5" with_hooks="$6" secrets domains envvars
   secrets="$(wb_secrets | jq -R . | jq -sc 'map(select(length > 0))')"
   domains="$(jq -c '.sandbox.allowed_domains' "$plan")"
+  # The session inherits the operator's environment. Every token-like variable in it (a proxy
+  # password, a cloud key) is denied to shell commands beside the template's fixed list; names
+  # only, never values. Claude Code's own CLAUDE_CODE_* variables are its to keep.
+  envvars="$(env | cut -d= -f1 | grep -iE 'token|api_key|secret|password|credential|^gh_' | grep -v '^CLAUDE_CODE_' | sort -u | jq -R . | jq -sc 'map(select(length > 0) | {name: ., mode: "deny"})')"
   jq --arg work "$work" --arg hooks "${T}/harness/hooks" --arg task "$tdir" --argjson secrets "$secrets" \
-     --argjson domains "$domains" --argjson extra "$extra" --argjson withHooks "$with_hooks" '
+     --argjson domains "$domains" --argjson extra "$extra" --argjson withHooks "$with_hooks" --argjson envvars "$envvars" '
     walk(if type == "string" then (split("{{WORK}}") | join($work) | split("{{HOOKS}}") | join($hooks) | split("{{TASK}}") | join($task)) else . end)
     | .permissions.deny += ([$secrets[] | "Read(/\(.))", "Read(/\(.)/**)"] + $extra)
     | .sandbox.filesystem.denyRead = $secrets
     | .sandbox.network.allowedDomains = $domains
+    | .sandbox.credentials.envVars = ((.sandbox.credentials.envVars // []) + $envvars | unique_by(.name))
     | if $withHooks == 1 then . else del(.hooks) end' "${T}/.claude/workbench/settings.template.json"
 }

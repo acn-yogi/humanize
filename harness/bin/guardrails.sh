@@ -129,7 +129,7 @@ expect() {  # expect <guardrail> <kind> <key> <label> <observed> <regex for the 
 pack_denied() { jq -r --arg t "$1" --arg p "$2" 'select(.event == "tool.call" and .tool == $t and .denied != null and (((.path // "") | contains($p)) or ((.command // "") | contains($p)) or ($p == ""))) | .denied' "${tdir}"/evidence/*.jsonl 2>/dev/null | head -1; }
 # The mod's refusal also reaches the session as a tool_use_error ("workbench-policy: ..."), which
 # the transcript keeps even when the evidence mod ran before the policy mod and recorded no denial.
-pack_refusal_text() { grep -m1 -F "workbench-policy: $1" <<< "$tool_text" | grep -F -- "$2" | sed -E 's/<\/?tool_use_error>//g' | cut -c1-160; }
+pack_refusal_text() { grep -F "workbench-policy: $1" <<< "$tool_text" | grep -m1 -F -- "$2" | sed -E 's/<\/?tool_use_error>//g' | cut -c1-160; }
 refused() {  # refused <tool> <path fragment>: which layer(s) refused it, or empty
   local n m t
   n="$(denied_tool "$1" "$2")"; m="$(pack_denied "$1" "$2")"; t="$(pack_refusal_text "$1" "$2" || true)"
@@ -140,9 +140,21 @@ refused() {  # refused <tool> <path fragment>: which layer(s) refused it, or emp
 }
 
 expect "Locked settings"       deny  net-repo-settings "network: a host only the repo's own settings allow (api.github.com)" "$(probe net-repo-settings)" '^blocked'
+# A tool on the deny list is not offered to the session at all: Claude Code's init event lists the
+# session's tools, and WebFetch and WebSearch must be missing. Were one offered and then refused,
+# the permission denial or the policy mod's refusal would show instead; either counts.
+tools="$(jq -c 'select(.type == "system" and .subtype == "init") | .tools // []' "${rdir}/transcript.jsonl" 2>/dev/null | head -1)"
+tools="${tools:-[]}"
+web_present="$(jq -r '[.[] | select(. == "WebFetch" or . == "WebSearch")] | join(", ")' <<< "$tools")"
+ntools="$(jq -r 'length' <<< "$tools")"
 r="$(refused WebFetch "")"
-[ -n "$r" ] && row PASS "Locked settings" deny webfetch "WebFetch tool (on the deny list)" "$r" \
-            || row FAIL "Locked settings" deny webfetch "WebFetch tool (on the deny list)" "no refusal recorded"
+if [ "$ntools" -gt 0 ] && [ -z "$web_present" ]; then
+  row PASS "Locked settings" deny webfetch "WebFetch tool (on the deny list)" "Claude Code offered the session ${ntools} tools and WebFetch and WebSearch were not among them (deny list; from the session's init event)${r:+; $r}"
+elif [ -n "$r" ]; then
+  row PASS "Locked settings" deny webfetch "WebFetch tool (on the deny list)" "$r"
+else
+  row FAIL "Locked settings" deny webfetch "WebFetch tool (on the deny list)" "the session was offered ${web_present:-?} and no refusal was recorded"
+fi
 expect "Filesystem allowlist"  deny  credentials   "Bash reads the person's credential files?"    "$(probe credentials)"   '^denied'
 expect "Filesystem allowlist"  deny  write-outside "Bash writes outside the worktree?"            "$(probe write-outside)" '^denied'
 expect "Filesystem allowlist"  allow write-inside  "Bash writes inside the worktree"              "$(probe write-inside)"  '^allowed'
