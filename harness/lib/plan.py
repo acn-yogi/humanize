@@ -145,6 +145,8 @@ def build_plan(harness: Path, spec_path: Path) -> dict:
         "harnessPaths": SHAPE_HARNESS_PATHS if kind == "shape" else HARNESS_PATHS,
         "checks": {
             "quick": str_list(checks.get("quick"), "checks.quick"),
+            # The repository's lint (config [checks] lint): the Stop hook runs it beside the quick checks.
+            "lint": str_list(config["checks"].get("lint"), "config checks.lint"),
             "acceptance": str_list(config["checks"]["always"], "config checks.always")
             + str_list(checks.get("acceptance"), "checks.acceptance"),
             "failFirst": fail_first,

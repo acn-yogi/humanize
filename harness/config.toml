@@ -55,11 +55,17 @@ allowed_domains = ["pypi.org", "files.pythonhosted.org"]
 commands = [
   "uv venv -q --python python3 {venv}",
   "uv pip install -q -p {venv} -e '{src}[tests]'",
+  # The repository's lint, at the version .pre-commit-config.yaml pins, so the Stop hook can run it.
+  "uv pip install -q -p {venv} ruff==0.16.10",
 ]
 
 [checks]
 # The repository's own suite, run on every task in a fresh clone of the result, no network.
 always = ["python -m pytest -q -p no:cacheprovider -x"]
+# The repository's own lint, run by the Stop hook beside the spec's quick checks before Claude
+# may finish, so a session cannot end with lint findings left for the reviewer (case
+# lint-in-quick-checks). --no-fix: the hook reports, Claude fixes. The pack id covers the hook.
+lint = ["ruff check --no-fix src tests"]
 
 # ---- What starts the work -----------------------------------------------------------------------
 # Three configurable triggers. A trigger only puts work into the queue: the dispatcher, the

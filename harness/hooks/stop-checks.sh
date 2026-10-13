@@ -1,8 +1,10 @@
 #!/bin/bash
 # Loop 2, finish. Claude Code runs this Stop hook when Claude declares it is done. It runs the
-# spec's quick checks on the worktree under bubblewrap with no network. If they fail, it
-# blocks the stop and hands the failures back as Claude's next instruction, up to the
-# continuation cap; at the cap it lets the session end and the retry loop takes over.
+# spec's quick checks, then the repository's own lint (harness/config.toml [checks] lint), on
+# the worktree under bubblewrap with no network. If any fails, it blocks the stop and hands the
+# failures back as Claude's next instruction, up to the continuation cap; at the cap it lets
+# the session end and the retry loop takes over. The lint joined the quick checks for case
+# lint-in-quick-checks: the reviewer kept finding ruff E501 that the session could have fixed.
 #
 #   stop-checks.sh <task dir>      (stdin: the Stop hook's JSON input)
 #
@@ -35,7 +37,7 @@ while IFS= read -r c; do
     failed=$((failed + 1))
     failures+="\$ ${c}   (exit ${rc})"$'\n'"$(tail -n 25 <<< "$res")"$'\n\n'
   fi
-done < <(jq -r '.checks.quick[]' "$plan")
+done < <(jq -r '.checks.quick[], (.checks.lint // [])[]' "$plan")
 
 if [ "$failed" = 0 ]; then
   event "$loops" --arg loop finish --arg result pass --argjson continuation "$n" --argjson checks "$passed" --arg stopHookActive "$active"
@@ -48,7 +50,7 @@ if [ "$n" -ge "$cap" ]; then
 fi
 echo $((n + 1)) > "${tdir}/continuations"
 event "$loops" --arg loop finish --arg result block --argjson continuation $((n + 1)) --argjson failed "$failed"
-jq -n --arg r "Not done yet: ${failed} of the spec's quick checks fail on your worktree (continuation $((n + 1)) of ${cap}). Fix the cause, not the check, then finish again.
+jq -n --arg r "Not done yet: ${failed} of the quick checks (the spec's checks and the repository's lint) fail on your worktree (continuation $((n + 1)) of ${cap}). Fix the cause, not the check, then finish again.
 
 ${failures}" '{decision: "block", reason: $r}'
 exit 0
