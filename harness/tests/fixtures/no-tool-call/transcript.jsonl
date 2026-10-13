@@ -1,0 +1,3 @@
+{"type":"system","subtype":"init","session_id":"s-fixture"}
+{"type":"assistant","message":{"content":[{"type":"text","text":"I would add the page like this: ..."}]}}
+{"type":"result","subtype":"success","is_error":false,"num_turns":1,"total_cost_usd":0.05,"session_id":"s-fixture","permission_denials":[],"result":"I would add the page like this: ..."}

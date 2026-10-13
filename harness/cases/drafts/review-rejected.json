@@ -1,0 +1,64 @@
+{
+  "id": "review-rejected",
+  "kind": "trajectory",
+  "status": "draft",
+  "from": "audit over runs, demo/recordings: 3 task(s), 5 hit(s) of REVIEW_REJECTED (the adversarial reviewer rejected a round)",
+  "failureClass": "REVIEW_REJECTED",
+  "spec": "0004-cli-entrypoint",
+  "specFile": "specs/0004-cli-entrypoint.md",
+  "otherSpecs": [
+    "0001-docs-local-testing",
+    "0002-bugfix-precisedelta-sign"
+  ],
+  "tasks": [
+    "t-01M4RYVYEG6H31MRD8C2N01K04",
+    "t-01M4RZHVFWTPBC0BG9QVPBAS3T",
+    "t-01M4RZHVGFWY1FXM7RNXWAVNQA"
+  ],
+  "baseSha": "52a0efb50be93f797ba773b407ded39149984420",
+  "prompt": "# A humanize command and python -m humanize\n\nUpstream issue: python-humanize/humanize#184.\n\n## Intent\n\nLet people use the most common functions from a shell without opening Python, as the\nmaintainer sketched in the issue: one `humanize` command with a subcommand per function,\nalso reachable as `python -m humanize`.\n\n    $ python -m humanize naturalsize 8589934592\n    8.6 GB\n    $ python -m humanize naturalsize --binary 8589934592\n    8.0 GiB\n\n## Constraints\n\n- Subcommands for a small set only: `naturalsize` (with `--binary`, `--gnu` and `--format`),\n  `intcomma`, `intword` and `naturaldelta` (seconds as a number).\n- Standard library `argparse` only. No new dependency.\n- A console script `humanize = \"humanize.cli:main\"` under `[project.scripts]` in\n  `pyproject.toml`, and `src/humanize/__main__.py` calling the same `main`.\n- Errors go to stderr with a non-zero exit; output is the bare result and a newline.\n- Tests in `tests/test_cli.py` that call `main()` with arguments and read stdout.\n\n## Out of scope\n\n- Every other function. Shell completion. Reading values from stdin.\n- Any change to existing public functions.\n\n## Acceptance criteria\n\n1. `python -m humanize naturalsize 8589934592` prints `8.6 GB`; with `--binary`, `8.0 GiB`;\n   `python -m humanize intcomma 1234567` prints `1,234,567`.\n2. `pyproject.toml` declares the `humanize` console script.\n3. `tests/test_cli.py` is part of the change, and the full suite passes.\n4. A person approves the PR: it changes the package manifest, which is high risk by policy.\n",
+  "k": 3,
+  "checks": [],
+  "hits": [
+    {
+      "taskId": "t-01M4RYVYEG6H31MRD8C2N01K04",
+      "spec": "0001-docs-local-testing",
+      "round": 0,
+      "file": "runs/t-01M4RYVYEG6H31MRD8C2N01K04/rounds.jsonl",
+      "line": 1,
+      "text": "The -k example selects all 76 tests in tests/test_filesize.py (same as running the file), so it does not show focusing a test run as the spec intends; The translation-binaries script has to run from the repo root and needs msgfmt on PATH; the page doesn't say so; The skip explanation leaves out the other skip reason in test_i18n.py"
+    },
+    {
+      "taskId": "t-01M4RZHVFWTPBC0BG9QVPBAS3T",
+      "spec": "0004-cli-entrypoint",
+      "round": 0,
+      "file": "runs/t-01M4RZHVFWTPBC0BG9QVPBAS3T/rounds.jsonl",
+      "line": 1,
+      "text": "intcomma/intword echo non-numeric input (e.g. 'abc') to stdout with exit 0, violating 'errors go to stderr with non-zero exit'; naturaldelta accepts inf/nan and prints them with exit 0; error-path tests cover only naturalsize and naturaldelta, so the gap is untested; adds docs/cli.md and an mkdocs nav entry beyond the spec's scope; pyproject.toml changed but touchesManifests reports false; needs explicit human approval per criterion 4"
+    },
+    {
+      "taskId": "t-01M4RZHVFWTPBC0BG9QVPBAS3T",
+      "spec": "0004-cli-entrypoint",
+      "round": 1,
+      "file": "runs/t-01M4RZHVFWTPBC0BG9QVPBAS3T/rounds.jsonl",
+      "line": 2,
+      "text": "intword/intcomma print unhumanized input with exit 0 for inputs like 1e3, 1e6, 1200000.5 that the CLI's own validation accepts, so errors don't reliably go to stderr with a non-zero exit as the spec requires; tests only cover abc/nan/inf, so this silent failure path is untested; huge integers are rejected with a misleading 'not a finite number' error; harness facts report touchesManifests=false although pyproject.toml changed; the required human approval must not be skipped; two commits with the"
+    },
+    {
+      "taskId": "t-01M4RZHVGFWY1FXM7RNXWAVNQA",
+      "spec": "0002-bugfix-precisedelta-sign",
+      "round": 0,
+      "file": "runs/t-01M4RZHVGFWY1FXM7RNXWAVNQA/rounds.jsonl",
+      "line": 1,
+      "text": "Docstring edit puts the new text inside the unclosed '0 minutes' example, which breaks the mkdocstrings-rendered docs; Extends 'zero never gains a sign' to any negative value whose output renders as zero, using a fragile scan for digits 1-9 in the output string, which the spec did not ask for; Unnecessary public-wrapper/private-helper split that repeats _date_and_delta's type checks"
+    },
+    {
+      "taskId": "t-01M4RZHVGFWY1FXM7RNXWAVNQA",
+      "spec": "0002-bugfix-precisedelta-sign",
+      "round": 1,
+      "file": "runs/t-01M4RZHVGFWY1FXM7RNXWAVNQA/rounds.jsonl",
+      "line": 2,
+      "text": "New test lines exceed 88 chars (tests/test_time.py:846-848, 862, 875); E501 is enabled via ruff 'E' and black would reformat, so pre-commit fails; precisedelta(timedelta(microseconds=-1)) returns '-0 seconds', a rendered zero with a sign, untested against the 'zero never gains a sign' constraint; Sign derived from clock comparison (date > now) plus a dead datetime guard instead of checking the input's sign directly; Two commits with the same message, the second partly undoing the first; should b"
+    }
+  ]
+}

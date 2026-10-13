@@ -1,0 +1,1 @@
+{"round":0,"allChecksPass":true,"changedPaths":["tests/test_time.py"],"verdict":{"verdict":"reject","reasons":["New test lines exceed 88 chars; E501 is enabled via ruff"]},"path":"per_pr","reasons":["adversarial review raised findings"]}
