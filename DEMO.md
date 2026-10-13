@@ -5,7 +5,7 @@ A ten-minute live run of the agentic development flow on a real open-source libr
 [acn-yogi/humanize](https://github.com/acn-yogi/humanize). Everything runs on one machine
 with Claude Code alone: a git worktree per task, the native sandbox, headless `claude -p`,
 our hooks and plugin pack, an adversarial Claude reviewer, a router, and a PR with its
-evidence packet. No microVM and no gateway: that is the companion design, not this demo.
+evidence packet. No microVM: that is the companion design, not this demo.
 
 Nothing here ever touches the upstream repository. PRs open on the fork only, and
 `harness/bin/publish.sh` refuses any repository that is not a fork of upstream.
@@ -228,7 +228,7 @@ Common live failures and the fix:
 
 ## What this demo does not show, honestly
 
-- **No microVM, no gateway.** This is the Claude native deployment: no VM, with Claude Code's
+- **No microVM.** This is the Claude native deployment: no VM, with Claude Code's
   sandbox, managed settings and the pack as the boundary, and credentials kept out of the
   session. It runs any code unattended. Where a client provides VMs, the same unit runs inside
   a microVM per task, which adds its own kernel and host firewall.
