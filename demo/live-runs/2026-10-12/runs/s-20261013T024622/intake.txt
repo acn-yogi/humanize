@@ -1,0 +1,9 @@
+PASS  3 spec file(s): 0008-feature-intcomma-expand-floats.md, 0009-feature-intcomma-expand-edges.md, 0010-docs-intcomma-expand.md
+PASS  plan plans/0002-intcomma-should-never-return-scientific.md, 397 words
+PASS  0008-feature-intcomma-expand-floats: fails on today's code (exit 1): python {harness}/checks/intcomma_expand_floats.py
+PASS  0008-feature-intcomma-expand-floats: class feature, status draft, scope src/humanize/number.py, tests/test_number.py
+PASS  0009-feature-intcomma-expand-edges: fails on today's code (exit 1): python {harness}/checks/intcomma_expand_edges.py
+PASS  0009-feature-intcomma-expand-edges: class feature, status draft, scope src/humanize/number.py, tests/test_number.py, tests/test_i18n.py
+PASS  0010-docs-intcomma-expand: fails on today's code (exit 1): python {harness}/checks/intcomma_expand_docs.py
+PASS  0010-docs-intcomma-expand: class docs, status draft, scope src/humanize/number.py, docs/number.md
+{"specs": ["0008-feature-intcomma-expand-floats", "0009-feature-intcomma-expand-edges", "0010-docs-intcomma-expand"], "intent": "0002-intcomma-should-never-return-scientific", "pass": 8, "fail": 0}

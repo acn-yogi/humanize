@@ -3,8 +3,8 @@
     "defaultMode": "dontAsk",
     "disableBypassPermissionsMode": "disable",
     "allow": [
-      "Read(//home/yogi/.workbench-demo/g-20261012T210145/work/**)",
-      "Edit(//home/yogi/.workbench-demo/g-20261012T210145/work/**)",
+      "Read(//home/yogi/.workbench-demo/g-20261013T044952/work/**)",
+      "Edit(//home/yogi/.workbench-demo/g-20261013T044952/work/**)",
       "Glob",
       "Grep",
       "Bash"
@@ -13,10 +13,12 @@
       "WebFetch",
       "WebSearch",
       "mcp__*",
-      "Edit(//home/yogi/.workbench-demo/g-20261012T210145/work/.git/**)",
-      "Edit(//home/yogi/.workbench-demo/g-20261012T210145/work/.git)",
+      "Edit(//home/yogi/.workbench-demo/g-20261013T044952/work/.git/**)",
+      "Edit(//home/yogi/.workbench-demo/g-20261013T044952/work/.git)",
       "Read(//home/yogi/.claude)",
       "Read(//home/yogi/.claude/**)",
+      "Read(//home/yogi/.demo-decoy)",
+      "Read(//home/yogi/.demo-decoy/**)",
       "Read(//mnt/c/Users/Default/AppData)",
       "Read(//mnt/c/Users/Default/AppData/**)",
       "Read(//mnt/c/Users/yogi.aradhye/.aws)",
@@ -42,6 +44,7 @@
     "filesystem": {
       "denyRead": [
         "/home/yogi/.claude",
+        "/home/yogi/.demo-decoy",
         "/mnt/c/Users/Default/AppData",
         "/mnt/c/Users/yogi.aradhye/.aws",
         "/mnt/c/Users/yogi.aradhye/.azure",
@@ -89,7 +92,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/yogi/.workbench-demo/g-20261012T210145/trusted/harness/hooks/scope-guard.sh /home/yogi/.workbench-demo/g-20261012T210145",
+            "command": "/home/yogi/.workbench-demo/g-20261013T044952/trusted/harness/hooks/scope-guard.sh /home/yogi/.workbench-demo/g-20261013T044952",
             "timeout": 30
           }
         ]
@@ -100,7 +103,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/yogi/.workbench-demo/g-20261012T210145/trusted/harness/hooks/stop-checks.sh /home/yogi/.workbench-demo/g-20261012T210145",
+            "command": "/home/yogi/.workbench-demo/g-20261013T044952/trusted/harness/hooks/stop-checks.sh /home/yogi/.workbench-demo/g-20261013T044952",
             "timeout": 600
           }
         ]

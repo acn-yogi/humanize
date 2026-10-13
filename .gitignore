@@ -36,8 +36,9 @@ dmypy.json
 # hatch-vcs
 src/*/_version.py
 
-# Workbench demo: local run output (recordings live in demo/recordings)
-runs/
+# Workbench demo: local run output (recordings live in demo/recordings; an archived run's
+# records under demo/live-runs/<date>/runs/ are kept, so only the top-level folder is ignored)
+/runs/
 # The recordings keep their console and check logs: the replay fallback reads them.
 !demo/recordings/**/*.log
 # The demo's live feed is rewritten on every run; the schema, validator and archived runs are kept.

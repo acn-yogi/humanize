@@ -1,0 +1,3 @@
+{"at":"2026-10-13T01:12:23Z","loop":"shape","event":"start","shapeId":"s-20261013T011217","intent":"0001-naturalday-weekdays","packId":"pack-d812d07de777"}
+{"at":"2026-10-13T01:14:16Z","loop":"finish","result":"pass","continuation":0,"checks":1,"stopHookActive":"false"}
+{"at":"2026-10-13T01:14:16Z","loop":"session","subtype":"success","turns":6,"costUsd":0.21254959999999998}
