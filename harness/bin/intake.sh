@@ -21,20 +21,26 @@ while [ $# -gt 0 ]; do
 done
 "${REPO}/harness/bin/preflight.sh" --quiet 2>/dev/null || die "preflight failed: run harness/bin/preflight.sh for the details"
 
-# One environment for intake, built from the working tree with network, reused across runs.
-export WB_TRUSTED="$REPO" WB_VENV="${WB_HOME}/intake-venv" WB_SRC="$REPO"
+# One environment for intake: a clone of HEAD under the workbench home (the editable install
+# writes src/humanize/_version.py, so it cannot be built from the read-only working tree),
+# rebuilt only when HEAD moves. The checks themselves run on the working tree.
+idir="${WB_HOME}/intake"
+export WB_TRUSTED="$REPO" WB_VENV="${idir}/venv" WB_SRC="${idir}/src"
 WB_BASE_SHA="$(g -C "$REPO" rev-parse HEAD)"; export WB_BASE_SHA
-mkdir -p "$WB_HOME" "${HOME}/.cache/uv"
-if [ ! -x "${WB_VENV}/bin/python" ]; then
-  log "intake: building the environment once (${WB_VENV})"
+mkdir -p "$idir" "${HOME}/.cache/uv"
+[ -d "$WB_SRC" ] || g clone --quiet --no-local "$REPO" "$WB_SRC"
+g -C "$WB_SRC" fetch --quiet "$REPO" HEAD && g -C "$WB_SRC" checkout --quiet --force --detach FETCH_HEAD
+if [ ! -x "${WB_VENV}/bin/python" ] || [ "$(cat "${idir}/sha" 2>/dev/null)" != "$WB_BASE_SHA" ]; then
+  log "intake: building the environment from HEAD ${WB_BASE_SHA:0:12} (${idir})"
   while IFS= read -r c; do
-    confined net "$WB_HOME" "$(expand "$c")" < /dev/null || die "setup failed: $c"
+    confined net "$idir" "$(expand "$c")" < /dev/null || die "setup failed: $c"
   done < <(python3 -c 'import tomllib,sys;[print(c) for c in tomllib.load(open(sys.argv[1],"rb"))["setup"]["commands"]]' "${REPO}/harness/config.toml")
+  echo "$WB_BASE_SHA" > "${idir}/sha"
 fi
 
-log "intake: harness/checks/shape_output.py on the working tree, under bubblewrap, no network"
+log "intake: harness/checks/shape_output.py on the working tree, under bubblewrap, no network (humanize from HEAD ${WB_BASE_SHA:0:12})"
 rc=0
-confined nonet "$REPO" "python harness/checks/shape_output.py ${args[*]+"${args[*]}"} $( [ "${#specs[@]}" -gt 0 ] && printf -- '--specs %s' "${specs[*]}" )" "$WB_VENV" < /dev/null || rc=$?
+confined nonet "$REPO" "python harness/checks/shape_output.py ${args[*]+"${args[*]}"} $( [ "${#specs[@]}" -gt 0 ] && printf -- '--specs %s' "${specs[*]}" )" "$WB_VENV" "$WB_SRC" < /dev/null || rc=$?
 log "intake: $( [ "$rc" = 0 ] && echo "PASS, every line held" || echo "FAIL (exit ${rc})" )"
 
 log "forecast: what the queue would do with them (drafts wait; nothing runs until a person approves)"
