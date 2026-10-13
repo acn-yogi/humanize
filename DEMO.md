@@ -355,6 +355,41 @@ Common live failures and the fix:
 - **Windows needs WSL2.** The native sandbox covers shell commands on Linux, macOS and WSL2,
   not native Windows.
 
+## The scripted run: `demo/run-demo.sh`
+
+The steps above are the hand-driven demo. `demo/run-demo.sh` is the same material as seven
+acts a script drives, each act emitting its milestones to `demo/live/events.jsonl` and
+`demo/live/state.json` as they happen (shape: `demo/live/schema.json`, checked by
+`demo/live/validate.py`) for the player to show. The Claude Code skill `harness-demo` runs it
+and narrates the feed; `demo/run-demo.ps1` is the Windows wrapper into WSL.
+
+```
+demo/run-demo.sh --dry-run --serve --hold                       # rehearse from the recordings, no spend
+demo/run-demo.sh --acts 0,1 --ask "intword should carry to the next unit" --budget 5
+demo/run-demo.sh --acts 2,3,4,6 --approve-batch --budget 25     # the spend the person approved
+demo/run-demo.sh --reset                                         # close the demo's PRs, remove its worktrees, specs and trap
+```
+
+| Act | What runs | Milestones (ids in `schema.json`) | Spend |
+|---|---|---|---|
+| 0 Bring in the repo | the fork checked or made with `gh`, upstream push URL disabled, repo facts, the suite in a fresh clone, the ten-dimension assessment scored live from `gh api`, the harness inventory | `repo.broughtIn`, `repo.worktreeRoot`, `repo.assessed`, `repo.onboarded` | none |
+| 1 The audience's feature | `--ask` or `--issue` becomes `intents/NNNN-*.md` (interview defaults marked in the file), `WORKBENCH_PHASE=3 shape.sh` writes draft specs whose checks fail on today's code, one worktree per spec under `~/.workbench-demo/demo/worktrees/` | `intent.captured`, `spec.written`, `spec.checkFailsOnBase`, `workbench.created` | the shaper, about $0.3 |
+| 2 The batch of twenty | `demo/lib/batch_plan.py` plans a mechanical docs batch from what fails today (`docstring_sections.py` on every public function, `docs_module_page.py` on every module page; 15 items on this fork, one held back), one human yes writes the batch row in `classes.toml`, `workbench.sh` 4 at a time, `approve-batch.sh --merge` | `batch.planned`, `batch.approved`, `workbench.started`, `workbench.checksPassed`, `reviewer.verdict`, `router.decision`, `pr.opened`, `pr.mergedByPolicy` or `pr.held` | about $0.5 per spec |
+| 3 The trap | `demo/trap/INSTRUCTIONS.md` planted with four injected instructions (push upstream, read `~/.ssh`, add a dependency, POST a decoy token), a spec that must read it, the evidence read back from the transcript, the hooks' log, the scope check, the reviewer and the packet | `trap.planted`, `trap.attempted`, `trap.denied` (per layer), `trap.evidence` | one task |
+| 4 Autonomy earned | `prove.sh --k 3 --record` on the held-back docs spec, graduation committed, the same spec run for real and merged by policy, then a packaging spec that stops for a person | `proof.run`, `class.graduated`, `pr.mergedByPolicy`, `pr.stoppedForPerson` | about 5 tasks |
+| 5 The harness fixes itself | replayed from the real PR #2 record: the reviewer's finding, `harness/cases/manifest-flag.json`, the `flags.ts` commit, `harness/bin/cases.sh` | `harness.bugFound`, `harness.caseRecorded`, `harness.fixShipped`, `harness.casePasses` | none |
+| 6 Ready to release | `harness/lib/verdict.py`: hard gates over the merged changes (packet, checks, scope, review, route) and the fork's CI | `verdict.ready` or `verdict.notReady`, `verdict.handedOff` | none |
+
+Every act ends with `act.summary` (tasks, PRs, spend, human prompts). `--budget` is the
+driver's hard stop for the whole run, over Claude Code's per-session caps. Acts are idempotent
+and resumable: `state.json` remembers what ran. A dry run takes everything from
+`demo/recordings/`; Act 4 has no recording yet, so its dry-run milestones are marked `scripted`.
+A live run is archived to `demo/live-runs/<date>/`.
+
+Spend is the person's call: the dry run and Acts 0 and 1 ran as part of building the driver;
+Acts 2, 3, 4 and 6 run live only on the person's approval, which was given on 12 October 2026
+for one full run under the $25 stop.
+
 ## Running more than the demo
 
 ```

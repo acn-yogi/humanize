@@ -40,3 +40,9 @@ src/*/_version.py
 runs/
 # The recordings keep their console and check logs: the replay fallback reads them.
 !demo/recordings/**/*.log
+# The demo's live feed is rewritten on every run; the schema, validator and archived runs are kept.
+demo/live/*
+!demo/live/schema.json
+!demo/live/validate.py
+!demo/live/README.md
+!demo/live-runs/**/*.log

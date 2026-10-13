@@ -1,0 +1,106 @@
+{
+  "$comment": "The demo's live feed. demo/run-demo.sh appends one event per line to demo/live/events.jsonl and rewrites demo/live/state.json on every event. The player reads both. demo/live/validate.py checks files against this schema (a JSON Schema subset: type, enum, required, properties, items, minimum, maximum, additionalProperties).",
+  "event": {
+    "type": "object",
+    "required": ["ts", "act", "kind", "id", "title", "detail", "level", "data"],
+    "properties": {
+      "ts": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}" },
+      "act": { "type": "integer", "minimum": 0, "maximum": 6 },
+      "kind": { "type": "string", "enum": ["milestone", "log", "counter", "state"] },
+      "id": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+$" },
+      "title": { "type": "string" },
+      "detail": { "type": "string" },
+      "level": { "type": "string", "enum": ["info", "key", "warn"] },
+      "data": { "type": "object" }
+    }
+  },
+  "milestoneIds": [
+    "repo.forked", "repo.broughtIn", "repo.worktreeRoot", "repo.assessed", "repo.onboarded",
+    "intent.captured", "spec.written", "spec.checkFailsOnBase", "spec.failFirst", "workbench.created",
+    "batch.planned", "batch.approved", "workbench.started", "workbench.checksPassed", "workbench.checksFailed",
+    "reviewer.verdict", "router.decision", "pr.opened", "pr.mergedByPolicy", "pr.held", "pr.stoppedForPerson",
+    "workbench.failed", "trap.planted", "trap.attempted", "trap.denied", "trap.notAttempted", "trap.evidence",
+    "proof.run", "class.graduated", "class.notGraduated", "harness.bugFound", "harness.caseRecorded",
+    "harness.fixShipped", "harness.casePasses", "verdict.ready", "verdict.notReady", "verdict.handedOff",
+    "act.summary", "budget.stop", "demo.reset"
+  ],
+  "state": {
+    "type": "object",
+    "required": ["repo", "deployment", "phase", "budget", "acts", "worktrees", "counters", "milestones"],
+    "properties": {
+      "repo": {
+        "type": "object",
+        "required": ["full_name", "url", "license", "tests", "test_seconds", "open_issues"],
+        "properties": {
+          "full_name": { "type": "string" },
+          "url": { "type": "string" },
+          "license": { "type": "string" },
+          "tests": { "type": "integer", "minimum": 0 },
+          "test_seconds": { "type": "number", "minimum": 0 },
+          "open_issues": { "type": "integer", "minimum": 0 },
+          "upstream": { "type": "string" },
+          "fork": { "type": "string" }
+        }
+      },
+      "deployment": { "type": "string", "enum": ["native"] },
+      "phase": { "type": "integer", "minimum": 0, "maximum": 3 },
+      "budget": {
+        "type": "object",
+        "required": ["cap", "spent"],
+        "properties": { "cap": { "type": "number", "minimum": 0 }, "spent": { "type": "number", "minimum": 0 } }
+      },
+      "acts": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["n", "title", "status", "started", "ended"],
+          "properties": {
+            "n": { "type": "integer", "minimum": 0, "maximum": 6 },
+            "title": { "type": "string" },
+            "status": { "type": "string", "enum": ["pending", "running", "done", "skipped"] },
+            "started": { "type": ["string", "null"] },
+            "ended": { "type": ["string", "null"] },
+            "summary": { "type": ["object", "null"] }
+          }
+        }
+      },
+      "worktrees": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["task", "spec", "class", "path", "status", "pr", "cost"],
+          "properties": {
+            "task": { "type": "string" },
+            "spec": { "type": "string" },
+            "class": { "type": "string" },
+            "path": { "type": "string" },
+            "status": { "type": "string", "enum": ["created", "running", "checks", "review", "routed", "pr", "merged", "held", "failed"] },
+            "pr": { "type": ["string", "null"] },
+            "cost": { "type": "number", "minimum": 0 },
+            "act": { "type": "integer", "minimum": 0, "maximum": 6 }
+          }
+        }
+      },
+      "counters": {
+        "type": "object",
+        "required": ["specs", "workbenches", "checks_passed", "checks_failed", "prs", "merged_by_policy", "stopped_for_person", "denied", "spend", "human_prompts"],
+        "properties": {
+          "specs": { "type": "integer", "minimum": 0 },
+          "workbenches": { "type": "integer", "minimum": 0 },
+          "checks_passed": { "type": "integer", "minimum": 0 },
+          "checks_failed": { "type": "integer", "minimum": 0 },
+          "prs": { "type": "integer", "minimum": 0 },
+          "merged_by_policy": { "type": "integer", "minimum": 0 },
+          "stopped_for_person": { "type": "integer", "minimum": 0 },
+          "denied": { "type": "integer", "minimum": 0 },
+          "spend": { "type": "number", "minimum": 0 },
+          "human_prompts": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "milestones": { "type": "array" },
+      "mode": { "type": "string", "enum": ["live", "dry-run"] },
+      "run_id": { "type": "string" },
+      "updated": { "type": "string" }
+    }
+  }
+}

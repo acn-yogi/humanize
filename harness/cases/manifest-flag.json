@@ -1,0 +1,7 @@
+{
+  "id": "manifest-flag",
+  "from": "PR #2 (spec 0004-cli-entrypoint, task t-01M4RZHVFWTPBC0BG9QVPBAS3T): the reviewer found that facts.json said touchesManifests=false although pyproject.toml changed",
+  "fixedIn": "harness/lib/flags.ts (the facts now carry the router's own risk flags, recomputed from the changed paths)",
+  "changedPaths": ["pyproject.toml", "src/humanize/__main__.py", "src/humanize/cli.py", "tests/test_cli.py"],
+  "expect": { "touchesManifests": true, "touchesCi": false, "touchesInstructions": false, "touchesSecurityPaths": false }
+}

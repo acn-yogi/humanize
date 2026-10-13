@@ -10,7 +10,7 @@
 # instruction files, security paths) send any change to per_pr, whatever its class says.
 
 [classes.docs]
-description = "Documentation pages under docs/ and the mkdocs nav: mechanical, no code"
+description = "Documentation: pages under docs/, the mkdocs nav, and docstrings in src/: mechanical, no behaviour change"
 approval = "batch"
 batch = "docs-2026-10"
 graduated = false        # becomes true once prove.sh records pass^3 for the docs cases

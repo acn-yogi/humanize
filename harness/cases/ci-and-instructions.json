@@ -1,0 +1,6 @@
+{
+  "id": "ci-and-instructions",
+  "from": "the router's own patterns (harness/lib/risk.ts): CI definitions, code owners and instruction files are high risk whatever the class says",
+  "changedPaths": [".github/workflows/test.yml", ".github/CODEOWNERS", "CLAUDE.md", "docs/index.md"],
+  "expect": { "touchesCi": true, "touchesInstructions": true, "touchesManifests": false, "touchesSecurityPaths": false }
+}
