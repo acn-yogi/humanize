@@ -59,6 +59,7 @@
             "title": { "type": "string" },
             "status": { "type": "string", "enum": ["pending", "running", "done", "skipped"] },
             "started": { "type": ["string", "null"] },
+            "spend_start": { "type": "number" },
             "ended": { "type": ["string", "null"] },
             "summary": { "type": ["object", "null"] }
           }

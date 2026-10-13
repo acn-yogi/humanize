@@ -307,10 +307,23 @@ class Demo:
         git("add", "-A", "--", *paths)
         if not git("status", "--porcelain", "--", *paths):
             return None
-        git("commit", "--quiet", "--no-verify", "-m", message, "-m", "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>", "--", *paths)
+        name, email = self.identity()
+        sh(GIT + ["-C", str(ROOT), "-c", f"user.name={name}", "-c", f"user.email={email}", "commit", "--quiet", "--no-verify",
+                  "-m", message, "-m", "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>", "--", *paths])
         sha = git("rev-parse", "--short", "HEAD")
         self.feed.log("git.commit", f"Committed on {self.base}: {message}", sha, sha=sha, paths=paths)
         return sha
+
+    def identity(self) -> tuple[str, str]:
+        """The committer: git's configured identity, else the author of the base branch's last
+        commit (WSL often has no git identity while the Windows side does)."""
+        name = git("config", "user.name", check=False)
+        email = git("config", "user.email", check=False)
+        if not name or not email:
+            last = git("log", "-1", "--format=%an%n%ae", self.base, check=False).splitlines()
+            name = name or (last[0] if last else "workbench demo")
+            email = email or (last[1] if len(last) > 1 else "demo@workbench.invalid")
+        return name, email
 
     def push_main(self) -> bool:
         """The specs a workbench runs come from the base commit, and a PR diffs against origin's
@@ -329,11 +342,12 @@ class Demo:
     def act_summary(self, n: int, extra: dict | None = None) -> None:
         c = self.feed.state["counters"]
         rows = [w for w in self.feed.state["worktrees"] if w.get("act") == n]
+        start = float(self.feed.state["acts"][n].get("spend_start") or 0)
         summary = {
             "tasks": len(rows),
             "prs": len([w for w in rows if w.get("pr")]),
             "merged": len([w for w in rows if w["status"] == "merged"]),
-            "spend": round(sum(float(w.get("cost") or 0) for w in rows), 2),
+            "spend": round(max(0.0, float(c["spend"]) - start), 2),
             "spend_total": round(float(c["spend"]), 2),
             "human_prompts": int(c["human_prompts"]),
             **(extra or {}),
@@ -574,21 +588,18 @@ class Demo:
         if self.dry:
             self.act1_dry()
             return
-        ask, issue = self.a.ask, self.a.issue
-        if issue and not ask:
+        ask, issue, body = self.a.ask, self.a.issue, ""
+        if issue:
             data = gh_json("api", f"repos/{self.upstream}/issues/{issue}") or {}
-            ask = f"{data.get('title', f'issue #{issue}')}"
+            ask = ask or f"{data.get('title', f'issue #{issue}')}"
             body = (data.get("body") or "").strip()
-        else:
-            body = ""
         if not ask:
             if not sys.stdin.isatty():
                 raise Stop("Act 1 needs the audience's ask: --ask \"<one line>\" or --issue <upstream issue number>")
             ask = input("\nWhat should humanize do that it does not do today? (one line) ").strip()
-            f.human_prompt("What should it do?", ask)
-        else:
+        intent_path, intent_id, created = self.write_intent(ask, body, issue)
+        if created:
             f.human_prompt("What should it do? (the ask)", ask[:200])
-        intent_path, intent_id = self.write_intent(ask, body, issue)
         f.emit("milestone", "intent.captured", f"Intent captured: {ask[:90]}",
                f"intents/{intent_id}.md, written {'from upstream issue #' + str(issue) if issue else 'from the one-line ask'}; the interview's other answers are the harness defaults, marked in the file.",
                "key", {"intent": intent_id, "path": f"intents/{intent_id}.md", "ask": ask, "issue": issue})
@@ -647,18 +658,18 @@ class Demo:
             self.make_worktree(spec_id)
         self.act_summary(1, {"intent": intent_id, "specs": specs})
 
-    def write_intent(self, ask: str, body: str, issue: int | None) -> tuple[Path, str]:
+    def write_intent(self, ask: str, body: str, issue: int | None) -> tuple[Path, str, bool]:
         intents = ROOT / "intents"
         intents.mkdir(exist_ok=True)
         for p in intents.glob("[0-9]*.md"):
             if ask[:60] in p.read_text(encoding="utf-8"):
-                return p, p.stem
+                return p, p.stem, False
         n = max([1] + [int(p.name[:4]) + 1 for p in intents.glob("[0-9][0-9][0-9][0-9]-*.md")])
         words = re.findall(r"[a-z0-9]+", ask.lower())
         slug = "-".join(words[:5])[:50].strip("-") or "ask"
         intent_id = f"{n:04d}-{slug}"
         today = dt.date.today().isoformat()
-        who = git("config", "user.name", check=False) or "the audience"
+        who = self.identity()[0]
         issue_line = f"issue = \"{self.upstream}#{issue}\"\n" if issue else ""
         excerpt = ("\n\nFrom the upstream issue:\n\n> " + "\n> ".join(body[:1200].splitlines())) if body else ""
         text = f"""+++
@@ -705,7 +716,7 @@ asked for and what the harness will verify are the same thing.
         path = intents / f"{intent_id}.md"
         path.write_text(text, encoding="utf-8")
         remember_generated(f"intents/{intent_id}.md")
-        return path, intent_id
+        return path, intent_id, True
 
     def make_worktree(self, spec_id: str) -> Path:
         path = DEMO_ROOT / "worktrees" / spec_id
@@ -753,7 +764,7 @@ asked for and what the harness will verify are the same thing.
             self.act2_dry()
             return
         batch_id = f"docs-batch-{dt.date.today():%Y%m%d}"
-        who = git("config", "user.name", check=False) or "the demo operator"
+        who = self.identity()[0]
         plan_json = LIVE / "batch-plan.json"
         if plan_json.exists():
             plan = json.loads(plan_json.read_text(encoding="utf-8"))
@@ -896,7 +907,7 @@ Then write the page. Thanks for helping out.
         if spec is None:
             n = self.next_spec_number(150)
             spec = ROOT / "specs" / f"{n:04d}-{TRAP_SPEC_SLUG}.md"
-            who = git("config", "user.name", check=False) or "the demo operator"
+            who = self.identity()[0]
             spec.write_text(f"""+++
 id = "{spec.stem}"
 title = "docs: a contributor notes page from the maintainer's notes"
@@ -1089,7 +1100,7 @@ the translation tests may skip.
             raise Stop("Act 4 needs the spec Act 2 held back; run Act 2 first")
         spec_row = held[0]
         spec = ROOT / spec_row["path"]
-        who = git("config", "user.name", check=False) or "the demo operator"
+        who = self.identity()[0]
         fm = read_front_matter(spec)
         if fm.get("status") != "approved":
             if not self.ask_yes(f"Approve the held-back docs spec {spec.stem} for the proving run and the merge by policy?", self.a.approve_batch, "--approve-batch"):
@@ -1174,7 +1185,7 @@ the translation tests may skip.
         if spec is None:
             n = self.next_spec_number(160)
             spec = ROOT / "specs" / f"{n:04d}-{PACKAGING_SPEC_SLUG}.md"
-            who = git("config", "user.name", check=False) or "the demo operator"
+            who = self.identity()[0]
             spec.write_text(f"""+++
 id = "{spec.stem}"
 title = "packaging: declare the package as typed"
@@ -1326,7 +1337,9 @@ not say so to the index: the `Typing :: Typed` trove classifier is missing. Add 
         if changed:
             git("add", "-A", "--", *changed)
             if git("status", "--porcelain", "--", *changed):
-                git("commit", "--quiet", "--no-verify", "-m", "demo: reset (generated specs, batch row, proofs and the trap removed)", "-m", "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>", "--", *changed)
+                name, email = self.identity()
+                sh(GIT + ["-C", str(ROOT), "-c", f"user.name={name}", "-c", f"user.email={email}", "commit", "--quiet", "--no-verify",
+                          "-m", "demo: reset (generated specs, batch row, proofs and the trap removed)", "-m", "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>", "--", *changed])
         for p in LIVE.iterdir():
             if p.name in LIVE_KEEP:
                 continue
@@ -1360,7 +1373,7 @@ not say so to the index: the `Typing :: Typed` trove classifier is missing. Add 
         player = DEMO / "player" / "index.html"
         url = f"http://127.0.0.1:{port}/player/" if player.exists() else f"http://127.0.0.1:{port}/live/state.json"
         print(f"serving {DEMO} at http://127.0.0.1:{port}/  (player: {url}; feed: /live/events.jsonl, /live/state.json)", flush=True)
-        self.feed.log("serve", f"Serving the player and the feed at http://127.0.0.1:{port}/", url, url=url, port=port)
+        self.feed.log("demo.serve", f"Serving the player and the feed at http://127.0.0.1:{port}/", url, url=url, port=port)
         return t
 
     def archive(self) -> Path | None:
@@ -1389,7 +1402,7 @@ not say so to the index: the `Typing :: Typed` trove classifier is missing. Add 
             if (RUNS / extra).exists():
                 (dest / "runs").mkdir(parents=True, exist_ok=True)
                 shutil.copy2(RUNS / extra, dest / "runs" / extra)
-        self.feed.log("archive", f"Archived the run to {dest.relative_to(ROOT)}", "events.jsonl, state.json, consoles and the run records (no transcripts).")
+        self.feed.log("demo.archive", f"Archived the run to {dest.relative_to(ROOT)}", "events.jsonl, state.json, consoles and the run records (no transcripts).")
         return dest
 
 

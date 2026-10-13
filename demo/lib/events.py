@@ -9,6 +9,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import threading
+import time
 from pathlib import Path
 
 ACT_TITLES = {
@@ -95,7 +96,15 @@ class Feed:
         self.state["updated"] = now()
         tmp = self.state_path.with_suffix(".json.tmp")
         tmp.write_text(json.dumps(self.state, indent=1, ensure_ascii=False), encoding="utf-8")
-        tmp.replace(self.state_path)
+        # On Windows the replace can fail while the http server has state.json open: retry briefly.
+        for attempt in range(8):
+            try:
+                tmp.replace(self.state_path)
+                break
+            except PermissionError:
+                if attempt == 7:
+                    raise
+                time.sleep(0.05 * (attempt + 1))
 
     # ---- typed ----------------------------------------------------------------------------
     def milestone(self, id: str, title: str, detail: str = "", level: str = "key", **data) -> dict:
@@ -138,6 +147,7 @@ class Feed:
             row = self.state["acts"][n]
             row["status"] = "running"
             row["started"] = row["started"] or now()
+            row.setdefault("spend_start", float(self.state["counters"]["spend"]))
         self.emit("state", "state.act", f"Act {n}: {ACT_TITLES[n]}", "started", "info", {"n": n, "status": "running"})
 
     def act_end(self, n: int, status: str = "done", summary: dict | None = None) -> None:
@@ -156,7 +166,7 @@ class Feed:
         """Upsert a worktree row by task id (or spec when the task is not known yet)."""
         with self.lock:
             rows = self.state["worktrees"]
-            row = next((r for r in rows if r["task"] == task), None)
+            row = next((r for r in rows if r["task"] == task), None) if task else None
             if row is None and fields.get("spec"):
                 row = next((r for r in rows if r["task"] == "" and r["spec"] == fields["spec"]), None)
                 if row is not None:

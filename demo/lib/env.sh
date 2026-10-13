@@ -17,6 +17,7 @@ mkdir -p "$idir" "${HOME}/.cache/uv"
 g -C "$WB_SRC" fetch --quiet "$REPO" HEAD && g -C "$WB_SRC" checkout --quiet --force --detach FETCH_HEAD
 if [ ! -x "${WB_VENV}/bin/python" ] || [ "$(cat "${idir}/sha" 2>/dev/null)" != "$WB_BASE_SHA" ]; then
   log "env: building the environment from HEAD ${WB_BASE_SHA:0:12} (${idir})"
+  rm -rf "$WB_VENV"
   while IFS= read -r c; do
     confined net "$idir" "$(expand "$c")" < /dev/null || die "setup failed: $c"
   done < <(python3 -c 'import tomllib,sys;[print(c) for c in tomllib.load(open(sys.argv[1],"rb"))["setup"]["commands"]]' "${REPO}/harness/config.toml")
