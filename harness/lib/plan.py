@@ -137,6 +137,10 @@ def build_plan(harness: Path, spec_path: Path) -> dict:
         "classRow": class_row,
         "status": status,
         "approvedBy": meta.get("approved_by"),
+        # What put the spec in the queue: "ticket:<n>" (the ticket watch), "schedule:<name>:<date>"
+        # (a schedule entry), or null when a person wrote and approved it by hand.
+        "trigger": meta.get("trigger"),
+        "triggeredAt": meta.get("triggered_at"),
         "scope": str_list(meta.get("scope"), "scope"),
         "harnessPaths": SHAPE_HARNESS_PATHS if kind == "shape" else HARNESS_PATHS,
         "checks": {

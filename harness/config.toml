@@ -60,3 +60,57 @@ commands = [
 [checks]
 # The repository's own suite, run on every task in a fresh clone of the result, no network.
 always = ["python -m pytest -q -p no:cacheprovider -x"]
+
+# ---- What starts the work -----------------------------------------------------------------------
+# Three configurable triggers. A trigger only puts work into the queue: the dispatcher, the
+# workbench and the sandboxed run are unchanged, and every task still runs under the caps
+# above. The halt flag (the file runs/HALT, or WORKBENCH_HALT) beats every trigger: while it
+# exists nothing starts, whatever the triggers say. harness/bin/dispatch.sh --watch runs them.
+[triggers]
+
+[triggers.ticket]
+# Ticket watch: poll this fork's GitHub issues (never upstream) on an interval. An issue that
+# carries the label, put there by a login in the approvers list, is the approval: the intake
+# interview runs headless on the issue (shape.sh --issue) and the spec it writes is approved
+# with approved_by = that login and trigger = "ticket:<number>". One issue, one task: a spec or
+# ledger row with the same trigger means the issue already ran; a reopened issue counts again.
+# If intake says the spec is not ready it stays a draft, and the open questions go back on the
+# issue as a comment only when comment = true. harness/bin/watch-tickets.sh --dry-run shows
+# which issues would start work and why, without starting anything.
+enabled = false
+source = "github"            # github issues on [github] repo; the fork, never upstream
+label = "priority:high"
+approvers = ["acn-yogi"]     # the label counts only when one of these logins added it
+poll_minutes = 5
+comment = false              # post the intake's open questions on a not-ready issue
+
+# Schedule: cron entries (5 fields: minute hour day-of-month month day-of-week) with a
+# timezone. Each entry either takes the approved queue (take = "queue", up to the caps) or
+# enqueues a recurring maintenance spec from harness/recurring/<spec>.md as one dated,
+# approved spec (spec = "<name>"). The first entry is the 30 minute timer the dispatcher
+# always had; drop it to run the queue only from tickets or by hand.
+[[triggers.schedule]]
+cron = "*/30 * * * *"
+tz = "UTC"
+take = "queue"
+
+[[triggers.schedule]]
+cron = "0 6 * * 1"           # Mondays at 06:00: hunt for flaky tests
+tz = "UTC"
+spec = "flaky-test-hunt"
+
+[[triggers.schedule]]
+cron = "0 6 1 * *"           # the first of the month at 06:00: the docstring sweep
+tz = "UTC"
+spec = "docstring-sweep"
+
+# Budget pool: "run until you spend $100" is pool_usd = 100, window = "run". The dispatcher
+# keeps starting approved specs while the pool has at least one per-task cap
+# (caps.max_budget_usd) left, debits each finished session's cost from the ledger, stops
+# starting when the pool is exhausted (running tasks finish within their own caps) and writes
+# a budget-exhausted row to the ledger. Windows: run (this dispatcher process), day, week,
+# month (UTC calendar). pool_usd = 0 means no pool: unlimited within the caps.
+# dispatch.sh --pool-usd N overrides pool_usd for one run.
+[triggers.budget]
+pool_usd = 0
+window = "run"

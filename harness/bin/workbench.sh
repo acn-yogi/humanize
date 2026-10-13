@@ -380,6 +380,6 @@ if [ "$publish" = 1 ] && [ "$path" != reject ]; then
 fi
 event "${out}/ledger.jsonl" --arg taskId "$task_id" --arg spec "$(pj .id)" --arg class "$(pj .class)" --arg path "$path" \
   --argjson reasons "$(jq -c .reasons "${rdir}/decision.json")" --argjson costUsd "$(jq .costUsd "${rdir}/packet.json")" \
-  --argjson retries "$(jq .loops.retries "${rdir}/packet.json")" --arg pr "$pr" --arg packId "$pack_id" --arg trial "$trial"
+  --argjson retries "$(jq .loops.retries "${rdir}/packet.json")" --arg pr "$pr" --arg packId "$pack_id" --arg trial "$trial"   --arg trigger "$(pj '.trigger // ""')"
 log "done: ${path}$( [ -n "$pr" ] && echo ", ${pr}" ), \$$(jq -r '.costUsd * 100 | round / 100' "${rdir}/packet.json") in total; packet ${rdir}/packet.json"
 echo "task-id: ${task_id}"

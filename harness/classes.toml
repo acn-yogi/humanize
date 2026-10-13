@@ -33,6 +33,11 @@ approval = "per_pr"
 risk = "high"
 graduated = false
 
+[classes.maintenance]
+description = "Recurring upkeep a schedule entry enqueues from harness/recurring/: flaky tests, docstring drift; small, reviewable, no new behaviour"
+approval = "per_pr"      # the recurring template is approved once by a person; each dated instance still ends at a PR for a person
+graduated = false
+
 [classes.shaping]
 description = "Phase 3 only: a plan and draft specs shaped from a documented intent; never code"
 approval = "per_pr"      # a person approves each draft spec before any workbench runs it
