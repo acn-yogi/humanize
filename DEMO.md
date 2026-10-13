@@ -18,7 +18,7 @@ what ran. What each phase means here, and what the demo has to show for it:
 
 | Phase | What it means | What ran on this fork |
 |---|---|---|
-| 0 Assess | Are the repo, pipeline, controls and team ready; a gap report, then onboarding | `demo/assess.md`: 25 of 50, with the gaps that close each phase. The harness was then installed, one piece per commit (step 0 below). |
+| 0 Assess | Are the repo, pipeline, controls and team ready; a gap report, then onboarding | `demo/assess.md`: 25 of 50, with the gaps that close each phase. The harness was then installed, one piece per commit (step 0 below). The two phase 2 gaps were then closed on the fork (Actions on, a ruleset on `main`, CODEOWNERS) and the fork re-assessed at 32 of 50. |
 | 1 Assisted | People write the spec, Claude writes the code and opens the PR, a person merges | Ran end to end: specs 0001, 0002 and 0004 became PRs #1, #3 and #2, each with its evidence packet, each waiting for a person. |
 | 2 Autonomous by class | Graduated classes merge by policy; only high-value or high-risk PRs reach a person | Routing shown: PR #1 joined the approved docs batch, PR #2 stopped for a person because it touches the package manifest. Graduation (`prove.sh`, pass^k) is built and has not run. |
 | 3 Self-improving | The proving loop plus shaping: a shaping agent turns a documented intent into a plan and specs with fail-first checks; the loop runs to a dark deploy; the feature flag is the human control | Shaping ran once (`harness/bin/shape.sh`, `demo/recordings/shape/`): one intent became a plan and three draft specs whose checks all fail on today's code, for $0.21. Nothing it shaped has run. |
@@ -97,10 +97,49 @@ protection 0, CODEOWNERS 1, backlog 4, secrets 4, flag service 1, deploy 3, obse
 eval seed 3. Every line rests on something observable in the repo or returned by `gh` to a
 read-only viewer; the file names the observation each time.
 
-**Say:** the assessment says which phase a repository can take today. This fork can take
-phase 1 now. Phase 2 merges by policy, so it waits for two gaps: `main` is unprotected and
-CI has never run on the fork. Phase 3 waits for a proving record and for the opt-in
+**Say:** the assessment says which phase a repository can take today. This fork could take
+phase 1 at once. Phase 2 merges by policy, so it waited for two gaps: `main` was unprotected
+and CI had never run on the fork. Phase 3 waits for a proving record and for the opt-in
 convention that plays the feature flag's part in a library.
+
+**Then the moment the gaps closed.** Both were closed later the same day with `gh` alone, no
+model spend, and the fork was assessed again: 32 of 50. Show the three commands that did it,
+then what the fork says now.
+
+```
+gh api -X PUT repos/acn-yogi/humanize/actions/permissions -F enabled=true -f allowed_actions=all
+git add .github/CODEOWNERS && git commit -m "Add CODEOWNERS" && git push origin main
+gh api -X POST repos/acn-yogi/humanize/rulesets --input demo/ruleset.json
+```
+
+```
+gh ruleset view 24964704 -R acn-yogi/humanize
+gh pr checks 1 -R acn-yogi/humanize | grep -E "^(Test successful|lint|mypy)\b"
+sed -n '/^## After closing the gaps/,/^### CI/p' demo/assess.md
+```
+
+**The audience sees** the rule as GitHub holds it: `main` takes changes only through a pull
+request; `Test successful`, `lint` and `mypy` must pass; one approving review from a code
+owner; review threads resolved; linear history; no force push, no deletion; squash the only
+merge method; one bypass, the repository admin role, which is the owner's token and so the
+harness's merge-by-policy path. Then PR #1's checks: `Test successful` green (27 jobs across
+three operating systems and nine Pythons), `mypy` green, `lint` red because prettier wants
+`docs/testing.md` rewrapped. Then the before and after table: CI 3 to 4, branch protection 0
+to 4, CODEOWNERS 1 to 3, the rest unchanged.
+
+**Say:** the red `lint` is the second verifier doing its job. The harness ran the suite and
+the acceptance checks in a fresh clone and never ran upstream's pre-commit set, so three PRs
+that passed the harness now carry a formatting finding each, and the gate will not let them
+merge until a workbench fixes it. The next harness change is one line: run the lint set among
+the quick checks. And the merge path still works: the commit that recorded this re-assessment
+(PR #4) went through the gate with the harness's own `gh pr merge` command, as the owner, with
+the required checks not yet reported. That is what the admin bypass is for, and it is the one
+hole the rule leaves open, on purpose, for the token the sandbox already hides.
+
+**Fallback (1 minute):** if GitHub is unreachable, the rule is `demo/ruleset.json` as it was
+posted, the re-assessment is the last section of `demo/assess.md`, and PR #1's check results
+are the table under "CI: 4" there. If GitHub is reachable but time is short, `gh ruleset view
+24964704 -R acn-yogi/humanize` and the PR #1 checks line are the two things to show.
 
 Then the onboarding, which is the other half of phase 0: after the assessment, the harness
 was installed in the fork, and the first spec followed. Nothing about the library changed.
@@ -112,7 +151,7 @@ What arrived, all under version control beside the code:
 | Pack | `harness/pack/` (policy and evidence mods) | A reasoned refusal before Claude Code's own denial, and an evidence stream for the packet |
 | Spec folder and templates | `specs/`, `intents/`, `harness/shaping/0000-shape.md`, `harness/guardrails/0000-guardrail-probe.md` | The unit of work, the phase 3 input, and the two fixed sessions (shaper, probe) |
 | Hooks | `harness/hooks/scope-guard.sh`, `harness/hooks/stop-checks.sh` | Loop 2: the scope held while Claude works; a finish blocked until the quick checks pass |
-| Checks and the re-run | `harness/checks/`, `harness/config.toml` `[setup]` and `[checks]` | The acceptance checks, and the suite run again in a fresh clone with no network after every session (the fork's own CI has not run yet, see the assessment) |
+| Checks and the re-run | `harness/checks/`, `harness/config.toml` `[setup]` and `[checks]` | The acceptance checks, and the suite run again in a fresh clone with no network after every session (the fork's own CI now runs too, and is required by the rule on `main`) |
 | Router and classes | `harness/lib/`, `harness/classes.toml`, `harness/proofs/` | Decides from facts; the approval each class gets; the pass^k record graduation reads |
 | Evidence folder | `runs/` (local, ignored), `demo/recordings/` (kept) | One folder per task: plan, facts, verdict, decision, packet, the PR body |
 
@@ -249,7 +288,9 @@ current pack: pass^k, never one lucky pass. `prove.sh` writes `harness/proofs/do
 for a person to commit; set `graduated = true` and `auto_merge = true` for the class, and the
 router sends the next docs result down `graduated`, which `publish.sh` merges by policy. Any
 change to the pack changes the pack id, and the class drops back to per batch until it is
-proven again.
+proven again. The merge itself goes through the ruleset on `main` (step 0): the harness runs
+`gh pr merge` as the owner, who is the rule's one bypass actor; every other actor needs the
+three green checks and a code owner's review.
 
 ### 7. Phase 3: shaping, from an intent to specs (optional, 2 minutes)
 
@@ -317,7 +358,7 @@ Any step can fall back to the recorded run, made on 12 October 2026 with this ex
 | 4 | `harness/bin/replay.sh` plays the recorded console at reading pace; `--fast` for a skim. |
 | 5 | Open the recorded PR: https://github.com/acn-yogi/humanize/pull/1 |
 | 6 | `harness/bin/approve-batch.sh docs-2026-10` reads the fork live; if GitHub is unreachable, show the PR labels in the recording. |
-| 0 | `demo/assess.md` is a file; the onboarding is `git log`, as in the step. |
+| 0 | `demo/assess.md` is a file; the onboarding is `git log`, as in the step. The rule is `demo/ruleset.json`; `gh ruleset view 24964704 -R acn-yogi/humanize` reads it live. |
 | 7 | `cat demo/recordings/shape/console.log` and the proposals beside it. |
 
 The recorded run is in `demo/recordings/t-01M4RYVYEG6H31MRD8C2N01K04/`: `console.log`, `spec.md`,

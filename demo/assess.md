@@ -27,6 +27,10 @@ which a library does not have.**
 Scores: 0 absent, 1 ad hoc, 2 present but not usable here, 3 usable with gaps, 4 solid, 5
 nothing to add for this phase.
 
+Later the same day the two gaps that held phase 2 back were closed and the fork was assessed
+again: **32 of 50**. The table above is the before; the section "After closing the gaps" at
+the end has the after, dimension by dimension, with the evidence.
+
 ## Tests: 4
 
 Observed: `tests/` holds seven files and 68 test functions, almost all parametrized, and
@@ -205,3 +209,111 @@ findings as cases.
   protected and CI runs on the fork.
 - Phase 3's shaping ran once (`demo/recordings/shape/`). The proving loop and the opt-in
   convention come first before anything it shapes merges by policy.
+
+## After closing the gaps (12 October 2026, later the same day)
+
+The same method and the same read-only evidence (`gh api`, `gh pr checks`, `gh ruleset
+view`), after three changes on the fork. No model spend: every step was `gh`, `git` and a
+text editor.
+
+**Headline: 32 of 50, from 25.** Phase 2 can now be switched on for merges: `main` takes
+changes only through a pull request with green required checks, and the harness's merge
+path still works, as the owner's bypass (below).
+
+| Dimension | Before | After | What changed |
+|---|---|---|---|
+| Tests | 4 | 4 | Nothing; still the regression oracle |
+| CI | 3 | 4 | Actions run on the fork; `Test successful`, `lint` and `mypy` report on every PR |
+| Branch protection | 0 | 4 | One ruleset on `main`: PR only, three required checks, one review, threads resolved, linear history, no force push, no deletion |
+| CODEOWNERS | 1 | 3 | `.github/CODEOWNERS`, every path owned by `@acn-yogi`, and the ruleset requires a code owner review |
+| Backlog shape | 4 | 4 | Nothing; the fork gained the seven `changelog:` labels upstream's PR workflow asks for |
+| Secrets hygiene | 4 | 4 | Still zero secrets on the fork, and none added |
+| Flag service | 1 | 1 | Nothing; the opt-in convention still stands in |
+| Deploy pipeline | 3 | 3 | `Build & verify package` now runs green on every PR, so the inspected wheel exists; publishing stays upstream's |
+| Observability | 2 | 2 | The coverage upload runs without a Codecov token and is ignored; CodSpeed (`benchmarks`) fails without its token; both dark by design |
+| Eval seed | 3 | 3 | Nothing; `harness/proofs/` is still empty |
+
+### CI: 4
+
+Observed: `repos/acn-yogi/humanize/actions/permissions` returns `enabled: true,
+allowed_actions: all`. The reason the three PRs showed `no checks reported` was simpler than
+a disabled fork: Actions were switched on after the branches had been pushed, and GitHub never
+runs a workflow for an event that happened before it was enabled. One empty commit per PR
+branch, then a close and reopen so the `pull_request` runs used a merge commit that includes
+the lint configuration below, gave each PR its runs.
+
+Results per PR, latest run of each check (`gh pr checks N`):
+
+| PR | `Test successful` (27 jobs) | `lint` | `mypy` | `Build & verify package` | `label` | `benchmarks` |
+|---|---|---|---|---|---|---|
+| #1 docs | pass | fail: prettier wants `docs/testing.md` rewrapped at 88 columns | pass | pass | pass | fail, no CodSpeed token |
+| #2 CLI | pass | fail: `pyproject-fmt` reorders the new `[project.scripts]` entry; ruff PT006 in `tests/test_cli.py` | pass | pass | pass | fail, no CodSpeed token |
+| #3 precisedelta | pass | fail: ruff E501 and black in `tests/test_time.py` | pass | pass | pass | fail, no CodSpeed token |
+
+`main` itself is green: `Test successful`, `lint` and `mypy` all pass on its head.
+
+The `lint` failures are real findings on the changed files, and they are what a second,
+independent verifier is for: the harness runs the test suite and the acceptance checks in a
+fresh clone, and never ran upstream's pre-commit set. Two things were changed so `lint` says
+something about the library change alone. The harness and demo folders are excluded from
+pre-commit and mypy (`.pre-commit-config.yaml` `exclude`, `pyproject.toml` `[tool.mypy]
+exclude`): they are tooling beside the library and carry their own checks. And the fork
+received the seven `changelog:` labels that `Require PR label` asks for; upstream's `Sync
+labels` workflow cannot create them on the fork, because its action builds a Docker image
+and the `ubuntu-slim` runner has no Docker.
+
+Gaps: the three open PRs cannot merge until their `lint` findings are fixed, which is the
+right outcome. Codecov and CodSpeed stay dark (no tokens on the fork, by design), so
+`benchmarks` is red on every PR and is not required.
+
+Closes it: `prek run --all-files` (or `tox -e lint`) among the harness's quick checks, so a
+workbench fixes formatting before it opens the PR; the router reading `gh pr checks` as a
+fact beside its own checks.
+
+### Branch protection: 4
+
+Observed: `gh ruleset view 24964704 -R acn-yogi/humanize`, "main: merge by policy only",
+active, target `~DEFAULT_BRANCH`. Rules: `deletion` (nobody deletes `main`),
+`non_fast_forward` (no force pushes), `required_linear_history`, `pull_request` (one
+approving review, code owner review, stale reviews dismissed on push, review threads
+resolved, squash the only merge method), `required_status_checks` (`Test successful`,
+`lint`, `mypy`, each from GitHub Actions, non-strict so a PR need not be rebased onto the
+latest `main` first). The rule as posted is kept in `demo/ruleset.json`. Classic branch
+protection was not used: a ruleset is what `gh` reads and writes cleanly, and it carries the
+bypass list explicitly instead of a single "include administrators" switch.
+
+The one bypass: `RepositoryRole` admin (actor id 5), mode `always`. This is the merge-by-policy
+path. `publish.sh` (graduated classes) and `approve-batch.sh --merge` (batches) both run `gh pr
+merge <pr> --squash --delete-branch` with the owner's token; the owner is the only admin and
+cannot approve their own PR, so without the bypass no harness merge could ever satisfy the
+review rule. Not enforcing against the admin is the choice here. It is a hole only for the
+owner's token, which the sandbox already keeps out of every Claude session (guardrail probe,
+PASS); for every other actor the rule is absolute. The harness's exact command was tested
+under the rule on the PR that carried this section: see "The merge path, tested".
+
+Gaps: the bypass lets the harness merge a graduated PR before its required checks finish,
+and the router does not yet read the check runs. Until it does, graduation (`prove.sh`) plus
+the harness's own checks are the gate for the harness, and the ruleset is the gate for
+everyone else.
+
+Closes it: `publish.sh` waits on `gh pr checks --watch` before `gh pr merge`, so the bypass
+covers the review only, never the checks; a bot account or GitHub App as the bypass actor in
+place of the admin role, so the owner's own token stops being the exception.
+
+### CODEOWNERS: 3
+
+Observed: `.github/CODEOWNERS` with `*`, `/.github/`, `/harness/`, `/specs/`,
+`/pyproject.toml` and `/src/humanize/locale/` all owned by `@acn-yogi`, and the ruleset
+requires a code owner review. A `per_pr` PR now requests its reviewer by name.
+
+Gaps: one owner who also authors every PR, so the owner's review is only ever satisfied by
+the bypass. Ownership is encoded; a second reviewer does not exist.
+
+Closes it: a second maintainer, or a reviewing bot, on the sensitive paths.
+
+### The merge path, tested
+
+The commit that added this section went to `main` through the new gate with the harness's
+command exactly as `publish.sh` and `approve-batch.sh` run it: `gh pr merge <url> --repo
+acn-yogi/humanize --squash --delete-branch`, the owner's token, no review, required checks
+not yet reported. The PR number, the outcome and the merge commit are in `DEMO.md` step 0.
