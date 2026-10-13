@@ -88,7 +88,7 @@ import re,sys
 t=open(sys.argv[1],encoding="utf-8").read(); m=re.match(r"\A\+\+\+\n.*?\n\+\+\+\n(.*)\Z",t,re.S); print(m.group(1).strip())' "${T}/${intent_rel}")"
 pack_id="pack-$(cd "$T" && find harness/pack harness/hooks .claude/workbench -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -c1-12)"
 next_num="$(printf '%04d' "$(( $(ls "${T}/specs" | grep -oE '^[0-9]{4}' | sort -n | tail -1 | sed 's/^0*//') + 1 ))")"
-classes="$(python3 -c 'import tomllib,sys;c=tomllib.load(open(sys.argv[1],"rb"))["classes"];print(", ".join(f"{k} ({v[\"description\"]})" for k,v in c.items() if k!="shaping"))' "${T}/harness/classes.toml")"
+classes="$(python3 -c 'import tomllib,sys;c=tomllib.load(open(sys.argv[1],"rb"))["classes"];print(", ".join(k + " (" + v["description"] + ")" for k,v in c.items() if k!="shaping"))' "${T}/harness/classes.toml")"
 
 log "shape ${id}: intent ${intent_id} on ${base} at ${base_sha:0:12}, ${pack_id}, phase $(pj .phase) ($(pj .phaseName), from $(pj .phaseSource))"
 event "${tdir}/loops.jsonl" --arg loop shape --arg event start --arg shapeId "$id" --arg intent "$intent_id" --arg packId "$pack_id"
