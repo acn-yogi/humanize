@@ -1,0 +1,458 @@
+{
+ "repo": {
+  "full_name": "python-humanize/humanize",
+  "url": "https://github.com/python-humanize/humanize",
+  "license": "MIT",
+  "tests": 744,
+  "test_seconds": 6.53,
+  "open_issues": 53,
+  "upstream": "python-humanize/humanize",
+  "fork": "acn-yogi/humanize"
+ },
+ "deployment": "native",
+ "phase": 2,
+ "budget": {
+  "cap": 5.0,
+  "spent": 0.2478
+ },
+ "acts": [
+  {
+   "n": 0,
+   "title": "Bring in the repo",
+   "status": "done",
+   "started": "2026-10-13T02:41:23.648Z",
+   "ended": "2026-10-13T02:42:09.276Z",
+   "summary": {
+    "tasks": 0,
+    "prs": 0,
+    "merged": 0,
+    "spend": 0,
+    "spend_total": 0.0,
+    "human_prompts": 0,
+    "score": 33
+   }
+  },
+  {
+   "n": 1,
+   "title": "The audience's feature",
+   "status": "done",
+   "started": "2026-10-13T02:42:09.443Z",
+   "ended": "2026-10-13T02:50:43.424Z",
+   "summary": {
+    "tasks": 3,
+    "prs": 0,
+    "merged": 0,
+    "spend": 0.25,
+    "spend_total": 0.25,
+    "human_prompts": 3,
+    "intent": "0002-intcomma-should-never-return-scientific",
+    "specs": [
+     "0008-feature-intcomma-expand-floats",
+     "0009-feature-intcomma-expand-edges",
+     "0010-docs-intcomma-expand"
+    ]
+   }
+  },
+  {
+   "n": 2,
+   "title": "The batch of twenty",
+   "status": "pending",
+   "started": null,
+   "ended": null,
+   "summary": null
+  },
+  {
+   "n": 3,
+   "title": "The trap",
+   "status": "pending",
+   "started": null,
+   "ended": null,
+   "summary": null
+  },
+  {
+   "n": 4,
+   "title": "Autonomy earned",
+   "status": "pending",
+   "started": null,
+   "ended": null,
+   "summary": null
+  },
+  {
+   "n": 5,
+   "title": "The harness fixes itself",
+   "status": "pending",
+   "started": null,
+   "ended": null,
+   "summary": null
+  },
+  {
+   "n": 6,
+   "title": "Ready to release",
+   "status": "pending",
+   "started": null,
+   "ended": null,
+   "summary": null
+  }
+ ],
+ "worktrees": [
+  {
+   "task": "",
+   "spec": "0008-feature-intcomma-expand-floats",
+   "class": "feature",
+   "path": "/home/yogi/.workbench-demo/demo/worktrees/0008-feature-intcomma-expand-floats",
+   "status": "created",
+   "pr": null,
+   "cost": 0.0,
+   "act": 1
+  },
+  {
+   "task": "",
+   "spec": "0009-feature-intcomma-expand-edges",
+   "class": "feature",
+   "path": "/home/yogi/.workbench-demo/demo/worktrees/0009-feature-intcomma-expand-edges",
+   "status": "created",
+   "pr": null,
+   "cost": 0.0,
+   "act": 1
+  },
+  {
+   "task": "",
+   "spec": "0010-docs-intcomma-expand",
+   "class": "docs",
+   "path": "/home/yogi/.workbench-demo/demo/worktrees/0010-docs-intcomma-expand",
+   "status": "created",
+   "pr": null,
+   "cost": 0.0,
+   "act": 1
+  }
+ ],
+ "counters": {
+  "specs": 3,
+  "workbenches": 0,
+  "checks_passed": 0,
+  "checks_failed": 0,
+  "prs": 0,
+  "merged_by_policy": 0,
+  "stopped_for_person": 0,
+  "denied": 0,
+  "spend": 0.2478,
+  "human_prompts": 3
+ },
+ "milestones": [
+  {
+   "ts": "2026-10-13T02:41:54.237Z",
+   "act": 0,
+   "kind": "milestone",
+   "id": "repo.broughtIn",
+   "title": "Repo brought in: python-humanize/humanize",
+   "detail": "Fork acn-yogi/humanize, upstream push URL DISABLED-never-push-upstream, MIT licensed, 744 tests pass in 6.53s, 53 open upstream issues.",
+   "level": "key",
+   "data": {
+    "full_name": "python-humanize/humanize",
+    "url": "https://github.com/python-humanize/humanize",
+    "license": "MIT",
+    "tests": 744,
+    "test_seconds": 6.53,
+    "open_issues": 53,
+    "upstream": "python-humanize/humanize",
+    "fork": "acn-yogi/humanize",
+    "pytest": "\u001b[32m\u001b[32m\u001b[1m744 passed\u001b[0m, \u001b[33m112 skipped\u001b[0m\u001b[32m in 6.53s\u001b[0m\u001b[0m"
+   }
+  },
+  {
+   "ts": "2026-10-13T02:41:54.360Z",
+   "act": 0,
+   "kind": "milestone",
+   "id": "repo.worktreeRoot",
+   "title": "Worktree root ready",
+   "detail": "/home/yogi/.workbench-demo/demo/worktrees: one git worktree per spec will appear here.",
+   "level": "info",
+   "data": {
+    "path": "/home/yogi/.workbench-demo/demo/worktrees"
+   }
+  },
+  {
+   "ts": "2026-10-13T02:42:08.415Z",
+   "act": 0,
+   "kind": "milestone",
+   "id": "repo.assessed",
+   "title": "Assessed: 33 of 50",
+   "detail": "Lowest: flag_service 1 (a library: an opt-in convention stands in for a flag); observability 2 (the harness ledger and packets; project signals dark on the fork). Full table in demo/live/assess.json.",
+   "level": "key",
+   "data": {
+    "score": 33,
+    "of": 50,
+    "dimensions": {
+     "tests": {
+      "score": 4,
+      "note": "744 pass in 6.53s in a fresh clone"
+     },
+     "ci": {
+      "score": 4,
+      "note": "10 workflows; 111 runs on the fork"
+     },
+     "branch_protection": {
+      "score": 4,
+      "note": "1 ruleset(s) on main"
+     },
+     "codeowners": {
+      "score": 4,
+      "note": "CODEOWNERS present"
+     },
+     "backlog_shape": {
+      "score": 4,
+      "note": "53 open upstream issues (read-only)"
+     },
+     "secrets_hygiene": {
+      "score": 4,
+      "note": "secret scanning on"
+     },
+     "flag_service": {
+      "score": 1,
+      "note": "a library: an opt-in convention stands in for a flag"
+     },
+     "deploy_pipeline": {
+      "score": 3,
+      "note": "release.yml builds on every push"
+     },
+     "observability": {
+      "score": 2,
+      "note": "the harness ledger and packets; project signals dark on the fork"
+     },
+     "eval_seed": {
+      "score": 3,
+      "note": "7 specs, 1 fail-first, 0 proof record(s)"
+     }
+    },
+    "source": "live (gh api, read-only)"
+   }
+  },
+  {
+   "ts": "2026-10-13T02:42:08.952Z",
+   "act": 0,
+   "kind": "milestone",
+   "id": "repo.onboarded",
+   "title": "Onboarded: the harness is installed beside the code",
+   "detail": "64 files under version control: settings template and attended settings (.claude/); the pack: policy and evidence mods (harness/pack/); scope and Stop hooks (harness/hooks/); checks, router, classes and proofs (harness/checks, lib, classes.toml, proofs/); specs and intents. Nothing about the library changed.",
+   "level": "key",
+   "data": {
+    "files": 64,
+    "folders": {
+     ".claude": 2,
+     ".claude/workbench": 1,
+     "harness": 3,
+     "harness/bin": 11,
+     "harness/cases": 2,
+     "harness/checks": 13,
+     "harness/guardrails": 2,
+     "harness/hooks": 2,
+     "harness/lib": 10,
+     "harness/pack/.claude-plugin": 1,
+     "harness/pack/workbench-evidence/.claude-plugin": 1,
+     "harness/pack/workbench-evidence/hooks": 2,
+     "harness/pack/workbench-policy/.claude-plugin": 1,
+     "harness/pack/workbench-policy/hooks": 2,
+     "harness/shaping": 1,
+     "harness/systemd": 2,
+     "intents": 1,
+     "specs": 7
+    }
+   }
+  },
+  {
+   "ts": "2026-10-13T02:42:09.111Z",
+   "act": 0,
+   "kind": "milestone",
+   "id": "act.summary",
+   "title": "Act 0 done: Bring in the repo",
+   "detail": "0 task(s), 0 PR(s), $0.00 this act, $0.00 so far, 0 human prompt(s) in all.",
+   "level": "key",
+   "data": {
+    "n": 0,
+    "tasks": 0,
+    "prs": 0,
+    "merged": 0,
+    "spend": 0,
+    "spend_total": 0.0,
+    "human_prompts": 0,
+    "score": 33
+   }
+  },
+  {
+   "ts": "2026-10-13T02:42:10.318Z",
+   "act": 1,
+   "kind": "milestone",
+   "id": "intent.captured",
+   "title": "Intent captured: intcomma should never return scientific notation for large floats",
+   "detail": "intents/0002-intcomma-should-never-return-scientific.md, written from upstream issue #431; the interview's other answers are the harness defaults, marked in the file.",
+   "level": "key",
+   "data": {
+    "intent": "0002-intcomma-should-never-return-scientific",
+    "path": "intents/0002-intcomma-should-never-return-scientific.md",
+    "ask": "intcomma should never return scientific notation for large floats",
+    "issue": 431
+   }
+  },
+  {
+   "ts": "2026-10-13T02:44:50.185Z",
+   "act": 1,
+   "kind": "milestone",
+   "id": "intent.captured",
+   "title": "Intent captured: intcomma should never return scientific notation for large floats",
+   "detail": "intents/0002-intcomma-should-never-return-scientific.md, written from upstream issue #431; the interview's other answers are the harness defaults, marked in the file.",
+   "level": "key",
+   "data": {
+    "intent": "0002-intcomma-should-never-return-scientific",
+    "path": "intents/0002-intcomma-should-never-return-scientific.md",
+    "ask": "intcomma should never return scientific notation for large floats",
+    "issue": 431
+   }
+  },
+  {
+   "ts": "2026-10-13T02:46:07.843Z",
+   "act": 1,
+   "kind": "milestone",
+   "id": "intent.captured",
+   "title": "Intent captured: intcomma should never return scientific notation for large floats",
+   "detail": "intents/0002-intcomma-should-never-return-scientific.md, written from upstream issue #431; the interview's other answers are the harness defaults, marked in the file.",
+   "level": "key",
+   "data": {
+    "intent": "0002-intcomma-should-never-return-scientific",
+    "path": "intents/0002-intcomma-should-never-return-scientific.md",
+    "ask": "intcomma should never return scientific notation for large floats",
+    "issue": 431
+   }
+  },
+  {
+   "ts": "2026-10-13T02:49:07.375Z",
+   "act": 1,
+   "kind": "milestone",
+   "id": "spec.written",
+   "title": "3 specs written from one intent",
+   "detail": "Drafts with TOML front matter: class, scope, checks, caps. A person approves; the shaper never does.",
+   "level": "key",
+   "data": {
+    "intent": "0002-intcomma-should-never-return-scientific",
+    "specs": [
+     "0008-feature-intcomma-expand-floats",
+     "0009-feature-intcomma-expand-edges",
+     "0010-docs-intcomma-expand"
+    ]
+   }
+  },
+  {
+   "ts": "2026-10-13T02:49:07.455Z",
+   "act": 1,
+   "kind": "milestone",
+   "id": "spec.checkFailsOnBase",
+   "title": "Fail-first holds: the new check fails on today's code (0008-feature-intcomma-expand-floats)",
+   "detail": "exit 1: python {harness}/checks/intcomma_expand_floats.py",
+   "level": "key",
+   "data": {
+    "spec": "0008-feature-intcomma-expand-floats",
+    "exit": 1,
+    "check": "python {harness}/checks/intcomma_expand_floats.py"
+   }
+  },
+  {
+   "ts": "2026-10-13T02:49:07.543Z",
+   "act": 1,
+   "kind": "milestone",
+   "id": "spec.checkFailsOnBase",
+   "title": "Fail-first holds: the new check fails on today's code (0009-feature-intcomma-expand-edges)",
+   "detail": "exit 1: python {harness}/checks/intcomma_expand_edges.py",
+   "level": "key",
+   "data": {
+    "spec": "0009-feature-intcomma-expand-edges",
+    "exit": 1,
+    "check": "python {harness}/checks/intcomma_expand_edges.py"
+   }
+  },
+  {
+   "ts": "2026-10-13T02:49:07.643Z",
+   "act": 1,
+   "kind": "milestone",
+   "id": "spec.checkFailsOnBase",
+   "title": "Fail-first holds: the new check fails on today's code (0010-docs-intcomma-expand)",
+   "detail": "exit 1: python {harness}/checks/intcomma_expand_docs.py",
+   "level": "key",
+   "data": {
+    "spec": "0010-docs-intcomma-expand",
+    "exit": 1,
+    "check": "python {harness}/checks/intcomma_expand_docs.py"
+   }
+  },
+  {
+   "ts": "2026-10-13T02:49:56.478Z",
+   "act": 1,
+   "kind": "milestone",
+   "id": "workbench.created",
+   "title": "Worktree created: /home/yogi/.workbench-demo/demo/worktrees/0008-feature-intcomma-expand-floats",
+   "detail": "Branch demo/0008-feature-intcomma-expand-floats from main, one per spec. A workbench is a worktree plus the sandboxed session that works in it.",
+   "level": "key",
+   "data": {
+    "spec": "0008-feature-intcomma-expand-floats",
+    "path": "/home/yogi/.workbench-demo/demo/worktrees/0008-feature-intcomma-expand-floats",
+    "branch": "demo/0008-feature-intcomma-expand-floats",
+    "class": "feature"
+   }
+  },
+  {
+   "ts": "2026-10-13T02:50:20.676Z",
+   "act": 1,
+   "kind": "milestone",
+   "id": "workbench.created",
+   "title": "Worktree created: /home/yogi/.workbench-demo/demo/worktrees/0009-feature-intcomma-expand-edges",
+   "detail": "Branch demo/0009-feature-intcomma-expand-edges from main, one per spec. A workbench is a worktree plus the sandboxed session that works in it.",
+   "level": "key",
+   "data": {
+    "spec": "0009-feature-intcomma-expand-edges",
+    "path": "/home/yogi/.workbench-demo/demo/worktrees/0009-feature-intcomma-expand-edges",
+    "branch": "demo/0009-feature-intcomma-expand-edges",
+    "class": "feature"
+   }
+  },
+  {
+   "ts": "2026-10-13T02:50:43.181Z",
+   "act": 1,
+   "kind": "milestone",
+   "id": "workbench.created",
+   "title": "Worktree created: /home/yogi/.workbench-demo/demo/worktrees/0010-docs-intcomma-expand",
+   "detail": "Branch demo/0010-docs-intcomma-expand from main, one per spec. A workbench is a worktree plus the sandboxed session that works in it.",
+   "level": "key",
+   "data": {
+    "spec": "0010-docs-intcomma-expand",
+    "path": "/home/yogi/.workbench-demo/demo/worktrees/0010-docs-intcomma-expand",
+    "branch": "demo/0010-docs-intcomma-expand",
+    "class": "docs"
+   }
+  },
+  {
+   "ts": "2026-10-13T02:50:43.312Z",
+   "act": 1,
+   "kind": "milestone",
+   "id": "act.summary",
+   "title": "Act 1 done: The audience's feature",
+   "detail": "1 task(s), 0 PR(s), $0.00 this act, $0.25 so far, 3 human prompt(s) in all.",
+   "level": "key",
+   "data": {
+    "n": 1,
+    "tasks": 1,
+    "prs": 0,
+    "merged": 0,
+    "spend": 0.0,
+    "spend_total": 0.25,
+    "human_prompts": 3,
+    "intent": "0002-intcomma-should-never-return-scientific",
+    "specs": [
+     "0008-feature-intcomma-expand-floats",
+     "0009-feature-intcomma-expand-edges",
+     "0010-docs-intcomma-expand"
+    ]
+   }
+  }
+ ],
+ "mode": "live",
+ "run_id": "demo-20261013T024123Z",
+ "updated": "2026-10-13T02:50:57.985Z"
+}

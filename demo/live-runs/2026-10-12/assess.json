@@ -1,0 +1,48 @@
+{
+ "at": "2026-10-13T02:42:08.378577+00:00",
+ "repo": "acn-yogi/humanize",
+ "score": 33,
+ "of": 50,
+ "dimensions": {
+  "tests": {
+   "score": 4,
+   "note": "744 pass in 6.53s in a fresh clone"
+  },
+  "ci": {
+   "score": 4,
+   "note": "10 workflows; 111 runs on the fork"
+  },
+  "branch_protection": {
+   "score": 4,
+   "note": "1 ruleset(s) on main"
+  },
+  "codeowners": {
+   "score": 4,
+   "note": "CODEOWNERS present"
+  },
+  "backlog_shape": {
+   "score": 4,
+   "note": "53 open upstream issues (read-only)"
+  },
+  "secrets_hygiene": {
+   "score": 4,
+   "note": "secret scanning on"
+  },
+  "flag_service": {
+   "score": 1,
+   "note": "a library: an opt-in convention stands in for a flag"
+  },
+  "deploy_pipeline": {
+   "score": 3,
+   "note": "release.yml builds on every push"
+  },
+  "observability": {
+   "score": 2,
+   "note": "the harness ledger and packets; project signals dark on the fork"
+  },
+  "eval_seed": {
+   "score": 3,
+   "note": "7 specs, 1 fail-first, 0 proof record(s)"
+  }
+ }
+}

@@ -1,0 +1,66 @@
+{
+ "v": 1,
+ "verdict": "not ready",
+ "fork": "acn-yogi/humanize",
+ "base": "main",
+ "merged": 0,
+ "changes": [
+  {
+   "task": "t-01M4RYVYEG6H31MRD8C2N01K04",
+   "spec": "0001-docs-local-testing",
+   "pr": "https://github.com/acn-yogi/humanize/pull/1",
+   "unmerged": true
+  },
+  {
+   "task": "t-01M4RZHVFWTPBC0BG9QVPBAS3T",
+   "spec": "0004-cli-entrypoint",
+   "pr": "https://github.com/acn-yogi/humanize/pull/2",
+   "unmerged": true
+  },
+  {
+   "task": "t-01M4RZHVGFWY1FXM7RNXWAVNQA",
+   "spec": "0002-bugfix-precisedelta-sign",
+   "pr": "https://github.com/acn-yogi/humanize/pull/3",
+   "unmerged": true
+  }
+ ],
+ "gates": [
+  {
+   "gate": "merged",
+   "result": "fail",
+   "detail": "0 merged change(s); 3 opened but not merged: 0001-docs-local-testing, 0004-cli-entrypoint, 0002-bugfix-precisedelta-sign"
+  },
+  {
+   "gate": "evidence",
+   "result": "pass",
+   "detail": "a packet on record for every change"
+  },
+  {
+   "gate": "checks",
+   "result": "pass",
+   "detail": "every check passed in a fresh clone with no network"
+  },
+  {
+   "gate": "scope",
+   "result": "pass",
+   "detail": "every diff inside its spec's scope"
+  },
+  {
+   "gate": "review",
+   "result": "fail",
+   "detail": "reviewer did not approve: 0004-cli-entrypoint, 0002-bugfix-precisedelta-sign"
+  },
+  {
+   "gate": "route",
+   "result": "pass",
+   "detail": "every change took an approval path"
+  },
+  {
+   "gate": "ci",
+   "result": "skip",
+   "detail": "offline: the fork's CI was not read"
+  }
+ ],
+ "source": "/mnt/c/code/workbench-demo/runs/ledger.jsonl (opened, not merged)",
+ "handoff": "the fork's release.yml builds and inspects the package on every push to main (the dark deploy); a tagged release is the flag flip and stays a person's decision"
+}
