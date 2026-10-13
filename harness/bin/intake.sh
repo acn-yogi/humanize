@@ -4,21 +4,27 @@
 # outside any Claude session: valid draft specs, a plan that names them, no scope into the
 # harness, and every check failing on today's code. Then the dispatcher's forecast for them.
 #
-#   harness/bin/intake.sh [--intent ID] [specs/NNNN-slug.md ...]
+#   harness/bin/intake.sh [--intent ID] [--issue N] [specs/NNNN-slug.md ...]
 #
-# Without spec files, the new and changed files under specs/ (per git status) are checked.
+# Without spec files, the new and changed files under specs/ (per git status) are checked;
+# with --issue N, the specs the ticket watch wrote for the fork's issue N (trigger = "ticket:N").
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck source=../lib/common.sh
 . "${REPO}/harness/lib/common.sh"
-args=() specs=()
+args=() specs=() issue=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --intent) args+=(--intent "${2:?}"); shift 2 ;;
+    --issue) issue="${2:?}"; shift 2 ;;
     -*) die "unknown option: $1" ;;
     *) specs+=("$1"); shift ;;
   esac
 done
+if [ -n "$issue" ]; then
+  while IFS= read -r f; do specs+=("$f"); done < <(grep -lE "^trigger = \"ticket:${issue}\"" "${REPO}"/specs/[0-9]*.md 2>/dev/null | sed "s,^${REPO}/,,")
+  [ "${#specs[@]}" -gt 0 ] || die "no spec carries trigger = \"ticket:${issue}\": the ticket watch has not shaped issue #${issue}"
+fi
 "${REPO}/harness/bin/preflight.sh" --quiet 2>/dev/null || die "preflight failed: run harness/bin/preflight.sh for the details"
 
 # One environment for intake: a clone of HEAD under the workbench home (the editable install

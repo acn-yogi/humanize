@@ -5,6 +5,13 @@
 # spec to approved and commits it, so the human control sits exactly where it did before.
 #
 #   harness/bin/shape.sh intents/<id>.md [--base BRANCH] [--out DIR] [--no-copy]
+#                        [--issue N --approved-by LOGIN]
+#
+#   --issue N --approved-by LOGIN   the ticket watch's headless intake: the intent came from the
+#              fork's issue N and LOGIN's label on it is the approval. When the intake check
+#              passes, the specs are stamped status = "approved", approved_by = LOGIN and
+#              trigger = "ticket:N" so the normal dispatch path takes them; when it fails they
+#              stay drafts, with the trigger, for a person to finish.
 #
 #   1 Intent   the intent and the whole harness come from the BASE commit; the phase must be 3
 #   2 Shape    a git worktree for this run alone; headless Claude Code (claude -p) in dontAsk
@@ -26,17 +33,20 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck source=../lib/common.sh
 . "${REPO}/harness/lib/common.sh"
 
-intent="" base="" out="${REPO}/runs" copy=1
+intent="" base="" out="${REPO}/runs" copy=1 issue="" approved_by=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --base) base="${2:?}"; shift 2 ;;
     --out) out="${2:?}"; shift 2 ;;
     --no-copy) copy=0; shift ;;
+    --issue) issue="${2:?}"; shift 2 ;;
+    --approved-by) approved_by="${2:?}"; shift 2 ;;
     -*) die "unknown option: $1" ;;
     *) intent="$1"; shift ;;
   esac
 done
-[ -n "$intent" ] || die "usage: shape.sh intents/<id>.md [--base BRANCH] [--out DIR] [--no-copy]"
+[ -n "$intent" ] || die "usage: shape.sh intents/<id>.md [--base BRANCH] [--out DIR] [--no-copy] [--issue N --approved-by LOGIN]"
+[ -z "$issue" ] || { [[ "$issue" =~ ^[0-9]+$ ]] && [ -n "$approved_by" ]; } || die "--issue takes the fork's issue number and needs --approved-by LOGIN (the login whose label approved it)"
 
 "${REPO}/harness/bin/preflight.sh" --quiet || die "preflight failed: run harness/bin/preflight.sh for the details"
 # shellcheck source=../lib/auth.sh
@@ -215,6 +225,29 @@ python3 "${T}/harness/lib/plan.py" queue "${T}/harness" "${work}/specs" 2>/dev/n
   | jq -r --argjson ids "$(jq -c '.specs // []' <<< "$intake_json")" '.[] | select(.id as $i | $ids | index($i)) | "  \(.action | ascii_upcase)\t\(.id)\t\(.class)\t\(.forecast)"' \
   | column -t -s $'\t' | tee "${rdir}/forecast.txt" || true
 
+# A ticket's intake: the approver's label is the approval, so specs that passed intake are
+# stamped approved for the queue; specs that did not stay drafts. Both carry the trigger, so
+# the ticket is never taken twice (one issue, one task) and the ledger can say what started it.
+if [ -n "$issue" ]; then
+  stamp_status="$( [ "$irc" = 0 ] && echo approved || echo draft )"
+  # shellcheck disable=SC2046
+  python3 - "$work" "$stamp_status" "$approved_by" "ticket:${issue}" "$(date -u +%FT%TZ)" $(jq -r '.specs[]?' <<< "$intake_json") <<'PY'
+import re, sys
+from pathlib import Path
+work, status, who, trigger, at, *ids = sys.argv[1:]
+for spec_id in ids:
+    p = Path(work) / "specs" / f"{spec_id}.md"
+    text = p.read_text(encoding="utf-8")
+    m = re.match(r"\A\+\+\+\n(.*?)\n\+\+\+\n", text, re.S)
+    if not m:
+        continue
+    front = re.sub(r"(?m)^(status|approved_by|trigger|triggered_at)\s*=.*\n?", "", m.group(1))
+    front = front.rstrip("\n") + f'\nstatus = "{status}"\napproved_by = "{who}"\ntrigger = "{trigger}"\ntriggered_at = "{at}"\n'
+    p.write_text("+++\n" + front + "+++\n" + text[m.end():], encoding="utf-8")
+PY
+  log "ticket #${issue}: $(jq -r '.specs | length' <<< "$intake_json") spec(s) stamped status = \"${stamp_status}\", approved_by = \"${approved_by}\", trigger = \"ticket:${issue}\"$( [ "$irc" = 0 ] || echo " (intake failed: drafts until a person finishes them)")"
+fi
+
 # ---- 4. Hand-off: proposals into the working tree, uncommitted; the record ---------------------
 mkdir -p "${rdir}/proposals"
 copied=0 skipped=()
@@ -231,15 +264,16 @@ jq -n --arg id "$id" --arg intent "$intent_id" --argjson phase "$(pj .phase)" --
   --arg model "$model" --arg v "$claude_version" --arg pack "$pack_id" --arg base "$base" --arg baseSha "$base_sha" \
   --arg s "$started_at" --arg e "$(date -u +%FT%TZ)" --argjson session "$session" --argjson changed "$changed" \
   --slurpfile scope "${rdir}/scope.json" --argjson intake "$intake_json" --argjson irc "$irc" --argjson copied "$copied" \
-  --slurpfile loops "${rdir}/loops.jsonl" \
-  '{v: 1, shapeId: $id, intent: $intent, phase: $phase, phaseSource: $phaseSource, model: $model, claudeCodeVersion: $v,
+  --slurpfile loops "${rdir}/loops.jsonl" --arg trigger "${issue:+ticket:${issue}}" \
+  '{v: 1, shapeId: $id, intent: $intent, trigger: (if $trigger == "" then null else $trigger end), phase: $phase, phaseSource: $phaseSource, model: $model, claudeCodeVersion: $v,
     packId: $pack, baseBranch: $base, baseCommit: $baseSha, startedAt: $s, endedAt: $e, session: $session,
     files: $changed, scope: $scope[0], intake: ($intake + {exit: $irc, ok: ($irc == 0)}),
     finish: [$loops[] | select(.loop == "finish")], scopeDenials: [$loops[] | select(.loop == "scope")],
     copiedIntoWorkingTree: $copied, costUsd: ($session.costUsd // 0)}' > "${rdir}/summary.json"
 event "${out}/ledger.jsonl" --arg taskId "$id" --arg spec "$intent_id" --arg class shaping --arg path shape \
   --argjson reasons "$(jq -c '[.specs[]?] | map("draft spec " + .)' <<< "$intake_json")" \
-  --argjson costUsd "$(jq '.costUsd // 0' <<< "$session")" --argjson retries 0 --arg pr "" --arg packId "$pack_id" --arg trial ""
+  --argjson costUsd "$(jq '.costUsd // 0' <<< "$session")" --argjson retries 0 --arg pr "" --arg packId "$pack_id" --arg trial "" \
+  --arg trigger "${issue:+ticket:${issue}}"
 [ "${#skipped[@]}" = 0 ] || log "not copied (a file with that name already exists in the working tree): ${skipped[*]}"
 log "done: $(jq -r '.specs | length' <<< "$intake_json") draft spec(s) for ${intent_id}, intake $( [ "$irc" = 0 ] && echo PASS || echo FAIL ), \$$(jq -r '(.costUsd // 0) * 100 | round / 100' <<< "$session"); ${copied} file(s) copied into the working tree, uncommitted. A person reviews them, sets status = \"approved\" on the specs they want, and commits."
 echo "shape-id: ${id}"

@@ -1,13 +1,29 @@
-# Loop 4 on a dedicated runner: one dispatcher wake-up. Install as a user unit:
-#   cp harness/systemd/workbench-dispatch.* ~/.config/systemd/user/
-#   systemctl --user daemon-reload && systemctl --user enable --now workbench-dispatch.timer
+# Loop 4 on a dedicated runner, in watch mode: the dispatcher stays up, ticks every minute, and
+# the triggers in harness/config.toml [triggers] decide what starts (schedule entries, the
+# ticket watch, the budget pool). The halt flag beats all of them: touch ~/workbench-demo/runs/HALT
+# to stop starting work, rm it to resume. Install as a user unit:
+#   cp harness/systemd/workbench-dispatch.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now workbench-dispatch.service
+#   journalctl --user -u workbench-dispatch -f          # the watch's log
 # The runner is dedicated: no personal files or credentials, a service key with its own
-# Console workspace spend limit, push rights to this fork only.
+# Console workspace spend limit, push rights to this fork only, gh signed in as the fork's
+# owner for the ticket watch. The 30 minute timer this unit used to need is now the first
+# [[triggers.schedule]] entry.
 [Unit]
-Description=Workbench dispatcher: run the next approved specs
+Description=Workbench dispatcher (watch mode): schedule entries, ticket watch, budget pool
+After=network-online.target
+Wants=network-online.target
 
 [Service]
-Type=oneshot
+Type=simple
 WorkingDirectory=%h/workbench-demo
 EnvironmentFile=%h/.config/workbench/env
-ExecStart=%h/workbench-demo/harness/bin/dispatch.sh
+ExecStart=%h/workbench-demo/harness/bin/dispatch.sh --watch
+Restart=on-failure
+RestartSec=60
+# A stop lets running workbenches finish within their caps; the halt flag is the gentler stop.
+KillMode=mixed
+TimeoutStopSec=1800
+
+[Install]
+WantedBy=default.target

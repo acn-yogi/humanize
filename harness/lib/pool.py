@@ -103,12 +103,15 @@ def status(config: dict, rows: list[dict], pool_override: float | None, since: d
     if pool == 0:
         return {"pool": 0, "window": window, "spent": spent, "left": None, "perTaskCap": cap, "fits": None,
                 "canStart": True, "exhausted": False, "unlimited": True, "since": start.isoformat() if start else None,
-                "rows": n, "queued": queued}
+                "rows": n, "queued": queued,
+                "line": f"pool: none (pool_usd = 0): unlimited within the caps, ${cap:.2f} per task"}
     left = round(max(0.0, pool - spent), 6)
     fits = int(math.floor(left / cap + 1e-9))
     return {"pool": pool, "window": window, "spent": spent, "left": left, "perTaskCap": cap, "fits": fits,
             "canStart": fits >= 1, "exhausted": fits < 1, "unlimited": False,
-            "since": start.isoformat() if start else None, "rows": n, "queued": queued}
+            "since": start.isoformat() if start else None, "rows": n, "queued": queued,
+            "line": f"pool: ${pool:.2f} (window {window}), spent ${spent:.2f} over {n} task(s), left ${left:.2f}, "
+                    f"per-task cap ${cap:.2f}: {fits} more task(s) fit"}
 
 
 def exhausted_row(st: dict, now: dt.datetime | None = None) -> dict:
