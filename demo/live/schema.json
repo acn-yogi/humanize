@@ -1,5 +1,28 @@
 {
-  "$comment": "The demo's live feed. demo/run-demo.sh appends one event per line to demo/live/events.jsonl and rewrites demo/live/state.json on every event. The player reads both. demo/live/validate.py checks files against this schema (a JSON Schema subset: type, enum, required, properties, items, minimum, maximum, additionalProperties).",
+  "$comment": "The demo's live feed. demo/run-demo.sh appends one event per line to demo/live/events.jsonl and rewrites demo/live/state.json on every event. The player reads both. demo/live/validate.py checks files against this schema (a JSON Schema subset: type, enum, required, properties, items, minimum, maximum, additionalProperties). Act 0b (Build the workbench) runs between Act 0 and Act 1: its events carry act 0 and data.part \"b\"; its row is state.acts[0].parts.b. Its milestones are guardrail.defined (data: name, enforcer, file, rule, part), guardrail.probed (data: name, probe, result refused|allowed, evidence, part) and workbench.built (the summary). Every later act names a guardrail by the same data.name.",
+  "guardrailEnforcers": ["managed settings", "native sandbox", "pack mod", "stop hook", "fresh clone", "reviewer settings", "git remote", "ruleset"],
+  "guardrailDefined": {
+    "type": "object",
+    "required": ["name", "enforcer", "file", "rule"],
+    "properties": {
+      "name": { "type": "string" },
+      "enforcer": { "type": "string", "enum": ["managed settings", "native sandbox", "pack mod", "stop hook", "fresh clone", "reviewer settings", "git remote", "ruleset"] },
+      "file": { "type": "string" },
+      "rule": { "type": "string" },
+      "part": { "type": "string", "enum": ["b"] }
+    }
+  },
+  "guardrailProbed": {
+    "type": "object",
+    "required": ["name", "probe", "result", "evidence"],
+    "properties": {
+      "name": { "type": "string" },
+      "probe": { "type": "string" },
+      "result": { "type": "string", "enum": ["refused", "allowed"] },
+      "evidence": { "type": "string" },
+      "part": { "type": "string", "enum": ["b"] }
+    }
+  },
   "event": {
     "type": "object",
     "required": ["ts", "act", "kind", "id", "title", "detail", "level", "data"],
@@ -22,11 +45,12 @@
     "workbench.failed", "trap.planted", "trap.attempted", "trap.denied", "trap.notAttempted", "trap.evidence",
     "proof.run", "class.graduated", "class.notGraduated", "harness.bugFound", "harness.caseRecorded",
     "harness.fixShipped", "harness.casePasses", "verdict.ready", "verdict.notReady", "verdict.handedOff",
+    "guardrail.defined", "guardrail.probed", "workbench.built",
     "act.summary", "budget.stop", "demo.reset"
   ],
   "state": {
     "type": "object",
-    "required": ["repo", "deployment", "phase", "budget", "acts", "worktrees", "counters", "milestones"],
+    "required": ["repo", "deployment", "phase", "budget", "acts", "worktrees", "guardrails", "counters", "milestones"],
     "properties": {
       "repo": {
         "type": "object",
@@ -61,7 +85,39 @@
             "started": { "type": ["string", "null"] },
             "spend_start": { "type": "number" },
             "ended": { "type": ["string", "null"] },
-            "summary": { "type": ["object", "null"] }
+            "summary": { "type": ["object", "null"] },
+            "parts": {
+              "type": "object",
+              "properties": {
+                "b": {
+                  "type": "object",
+                  "required": ["title", "status", "started", "ended"],
+                  "properties": {
+                    "title": { "type": "string" },
+                    "status": { "type": "string", "enum": ["pending", "running", "done", "skipped"] },
+                    "started": { "type": ["string", "null"] },
+                    "spend_start": { "type": "number" },
+                    "ended": { "type": ["string", "null"] },
+                    "summary": { "type": ["object", "null"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "guardrails": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["name", "enforcer", "file", "rule", "probe", "evidence"],
+          "properties": {
+            "name": { "type": "string" },
+            "enforcer": { "type": "string", "enum": ["", "managed settings", "native sandbox", "pack mod", "stop hook", "fresh clone", "reviewer settings", "git remote", "ruleset"] },
+            "file": { "type": "string" },
+            "rule": { "type": "string" },
+            "probe": { "type": "string", "enum": ["pending", "refused", "allowed"] },
+            "evidence": { "type": "string" }
           }
         }
       },

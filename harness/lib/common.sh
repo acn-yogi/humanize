@@ -17,7 +17,9 @@ g() { git -c core.hooksPath=/dev/null -c core.fsmonitor=false -c core.untrackedC
 wb_secrets() {
   local p prof
   {
-    for p in .ssh .aws .config/gcloud .config/gh .config/hub .config/git/credentials .azure .kube .docker .gnupg       .git-credentials .netrc .npmrc .pypirc .claude .local/share/keyrings .terraform.d .vault-token       .cargo/credentials .cargo/credentials.toml .m2/settings.xml .gradle/gradle.properties; do
+    # .demo-decoy holds the demo's decoy secret (demo/run-demo.sh plants it). It stands in for a
+    # real secret file, so it is hidden exactly like one.
+    for p in .ssh .aws .config/gcloud .config/gh .config/hub .config/git/credentials .azure .kube .docker .gnupg       .git-credentials .netrc .npmrc .pypirc .claude .local/share/keyrings .terraform.d .vault-token       .cargo/credentials .cargo/credentials.toml .m2/settings.xml .gradle/gradle.properties .demo-decoy; do
       [ -e "${HOME}/${p}" ] && realpath -e "${HOME}/${p}"
     done
     # In WSL the Windows profiles are mounted too, with the Windows Claude login and gh token.

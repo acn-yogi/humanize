@@ -85,6 +85,12 @@ def main(argv: list[str]) -> int:
             check(ev, schema["event"], f"events.jsonl:{n}", problems)
             if isinstance(ev, dict) and ev.get("kind") == "milestone" and ev.get("id") not in schema["milestoneIds"]:
                 problems.append(f"events.jsonl:{n}: milestone id {ev.get('id')!r} is not in schema.milestoneIds")
+            # Act 0b's guardrail milestones carry a fixed data shape: the player and the runbook build against it.
+            if isinstance(ev, dict) and ev.get("kind") == "milestone" and ev.get("id") in ("guardrail.defined", "guardrail.probed"):
+                key = "guardrailDefined" if ev["id"] == "guardrail.defined" else "guardrailProbed"
+                check(ev.get("data"), schema[key], f"events.jsonl:{n}.data", problems)
+                if ev.get("act") != 0 or (ev.get("data") or {}).get("part") != "b":
+                    problems.append(f"events.jsonl:{n}: {ev['id']} must carry act 0 and data.part \"b\" (Act 0b)")
             events.append(ev)
         for a, b in zip(events, events[1:]):
             if isinstance(a, dict) and isinstance(b, dict) and str(a.get("ts")) > str(b.get("ts")):
@@ -111,6 +117,21 @@ def main(argv: list[str]) -> int:
                 acts = state.get("acts") or []
                 if [a.get("n") for a in acts if isinstance(a, dict)] != list(range(7)):
                     problems.append("state.json.acts: expected one row per act 0 to 6, in order")
+                # Every guardrail a probe reported on must have been defined first, and the state row must agree
+                # with the last probe milestone for it.
+                defined = {e["data"].get("name") for e in events if isinstance(e, dict) and e.get("id") == "guardrail.defined" and isinstance(e.get("data"), dict)}
+                last_probe: dict[str, str] = {}
+                for e in events:
+                    if isinstance(e, dict) and e.get("id") == "guardrail.probed" and isinstance(e.get("data"), dict):
+                        if e["data"].get("name") not in defined:
+                            problems.append(f"events.jsonl: guardrail.probed for {e['data'].get('name')!r} without a guardrail.defined before it")
+                        last_probe[e["data"].get("name")] = e["data"].get("result")
+                rows = {g.get("name"): g for g in (state.get("guardrails") or []) if isinstance(g, dict)}
+                for name, result in last_probe.items():
+                    if name not in rows:
+                        problems.append(f"state.json.guardrails: no row for {name!r}, which events.jsonl probed")
+                    elif rows[name].get("probe") != result:
+                        problems.append(f"state.json.guardrails[{name!r}].probe is {rows[name].get('probe')!r}, the last probe said {result!r}")
                 c = state.get("counters") or {}
                 b = state.get("budget") or {}
                 if isinstance(c, dict) and isinstance(b, dict) and c.get("spend") is not None and b.get("spent") is not None:

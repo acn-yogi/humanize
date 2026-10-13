@@ -5,7 +5,7 @@
 | File | What |
 |---|---|
 | `events.jsonl` | append-only, one event per line: `{"ts","act","kind","id","title","detail","level","data"}` |
-| `state.json` | rewritten on every event: repo facts, phase, budget, the acts, the worktrees, the counters, the last 50 milestones |
+| `state.json` | rewritten on every event: repo facts, phase, budget, the acts (Act 0b under `acts[0].parts.b`), the worktrees, the guardrails Act 0b defined and probed (`name`, `enforcer`, `file`, `rule`, `probe`: pending, refused or allowed, `evidence`), the counters, the last 50 milestones |
 | `schema.json` | the shape of both, and the list of milestone ids |
 | `validate.py` | `python3 demo/live/validate.py` checks the two files against the schema |
 | `console/` | the console log of every workbench, shaper and proving run the driver started |

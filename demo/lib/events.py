@@ -22,6 +22,13 @@ ACT_TITLES = {
     6: "Ready to release",
 }
 
+# Act 0 has a second part, 0b: it runs after Act 0 and before Act 1. Its events carry act 0 and
+# data.part "b", so consumers that know seven acts keep working; its row lives on the Act 0 row
+# under "parts".
+ACT_PART_TITLES = {
+    (0, "b"): "Build the workbench",
+}
+
 COUNTERS = [
     "specs", "workbenches", "checks_passed", "checks_failed", "prs", "merged_by_policy",
     "stopped_for_person", "denied", "spend", "human_prompts",
@@ -40,6 +47,7 @@ def fresh_state(cap: float, mode: str, run_id: str) -> dict:
         "budget": {"cap": cap, "spent": 0.0},
         "acts": [{"n": n, "title": t, "status": "pending", "started": None, "ended": None, "summary": None} for n, t in ACT_TITLES.items()],
         "worktrees": [],
+        "guardrails": [],
         "counters": {k: (0.0 if k == "spend" else 0) for k in COUNTERS},
         "milestones": [],
         "mode": mode,
@@ -61,10 +69,14 @@ class Feed:
             self.state = json.loads(self.state_path.read_text(encoding="utf-8"))
             self.state["mode"] = mode
             self.state["budget"]["cap"] = cap
+            self.state.setdefault("guardrails", [])
             # A resumed run keeps its spend and counters; the acts keep their status.
             for a in self.state["acts"]:
                 if a["status"] == "running":
                     a["status"] = "pending"
+                for part in (a.get("parts") or {}).values():
+                    if part.get("status") == "running":
+                        part["status"] = "pending"
         else:
             self.state = fresh_state(cap, mode, run_id)
             self.events_path.write_text("", encoding="utf-8")
@@ -161,6 +173,46 @@ class Feed:
 
     def act_status(self, n: int) -> str:
         return self.state["acts"][n]["status"]
+
+    # ---- act parts (Act 0b) --------------------------------------------------------------------
+    def part_row(self, n: int, part: str) -> dict:
+        with self.lock:
+            parts = self.state["acts"][n].setdefault("parts", {})
+            return parts.setdefault(part, {"title": ACT_PART_TITLES[(n, part)], "status": "pending", "started": None, "ended": None, "summary": None})
+
+    def part_start(self, n: int, part: str) -> None:
+        self.act = n
+        with self.lock:
+            row = self.part_row(n, part)
+            row["status"] = "running"
+            row["started"] = row["started"] or now()
+            row.setdefault("spend_start", float(self.state["counters"]["spend"]))
+        self.emit("state", "state.act", f"Act {n}{part}: {ACT_PART_TITLES[(n, part)]}", "started", "info", {"n": n, "part": part, "status": "running"})
+
+    def part_end(self, n: int, part: str, status: str = "done", summary: dict | None = None) -> None:
+        with self.lock:
+            row = self.part_row(n, part)
+            row["status"] = status
+            row["ended"] = now()
+            if summary is not None:
+                row["summary"] = summary
+        self.emit("state", "state.act", f"Act {n}{part}: {ACT_PART_TITLES[(n, part)]}", status, "info", {"n": n, "part": part, "status": status, "summary": summary or {}})
+
+    def part_status(self, n: int, part: str) -> str:
+        return self.part_row(n, part)["status"]
+
+    # ---- guardrails (Act 0b) -------------------------------------------------------------------
+    def guardrail(self, name: str, **fields) -> dict:
+        """Upsert a guardrail row by name: enforcer, file, rule, probe (pending, refused, allowed), evidence."""
+        with self.lock:
+            rows = self.state["guardrails"]
+            row = next((r for r in rows if r["name"] == name), None)
+            if row is None:
+                row = {"name": name, "enforcer": "", "file": "", "rule": "", "probe": "pending", "evidence": ""}
+                rows.append(row)
+            row.update({k: v for k, v in fields.items() if v is not None})
+            self._write_state()
+            return dict(row)
 
     def worktree(self, task: str, **fields) -> dict:
         """Upsert a worktree row by task id (or spec when the task is not known yet)."""
