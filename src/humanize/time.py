@@ -547,10 +547,23 @@ def precisedelta(
     '0 minutes'
 
     ```
+
+    A negative value keeps its sign, like `str(timedelta)` does:
+
+    ```pycon
+    >>> precisedelta(dt.timedelta(seconds=-3661))
+    '-1 hour, 1 minute and 1 second'
+
+    ```
     """
-    date, delta = _date_and_delta(value, precise=True)
+    import datetime as dt
+
+    now = _now()
+    date, delta = _date_and_delta(value, now=now, precise=True)
     if date is None:
         return str(value)
+    # `date` is `now - value`, so it lies after `now` only for a negative delta.
+    sign = "-" if date > now and not isinstance(value, dt.datetime) else ""
 
     suppress_set = {Unit[s.upper()] for s in suppress}
 
@@ -675,12 +688,12 @@ def precisedelta(
             break
 
     if len(texts) == 1:
-        return texts[0]
+        return sign + texts[0]
 
     head = ", ".join(texts[:-1])
     tail = texts[-1]
 
-    return _("%s and %s") % (head, tail)
+    return sign + _("%s and %s") % (head, tail)
 
 
 def _rounding_by_fmt(format: str, value: float) -> float | int:
