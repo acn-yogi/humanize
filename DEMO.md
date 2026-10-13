@@ -10,6 +10,22 @@ evidence packet. No microVM: that is the companion design, not this demo.
 Nothing here ever touches the upstream repository. PRs open on the fork only, and
 `harness/bin/publish.sh` refuses any repository that is not a fork of upstream.
 
+## Which phase is this
+
+The harness carries a phase in `harness/config.toml` (`[harness] phase`, 0 to 3), and the
+dispatcher, the router and the shaper honour it. This fork is set to **phase 2**, which is
+what ran. What each phase means here, and what the demo has to show for it:
+
+| Phase | What it means | What ran on this fork |
+|---|---|---|
+| 0 Assess | Are the repo, pipeline, controls and team ready; a gap report, then onboarding | `demo/assess.md`: 25 of 50, with the gaps that close each phase. The harness was then installed, one piece per commit (step 0 below). |
+| 1 Assisted | People write the spec, Claude writes the code and opens the PR, a person merges | Ran end to end: specs 0001, 0002 and 0004 became PRs #1, #3 and #2, each with its evidence packet, each waiting for a person. |
+| 2 Autonomous by class | Graduated classes merge by policy; only high-value or high-risk PRs reach a person | Routing shown: PR #1 joined the approved docs batch, PR #2 stopped for a person because it touches the package manifest. Graduation (`prove.sh`, pass^k) is built and has not run. |
+| 3 Self-improving | The proving loop plus shaping: a shaping agent turns a documented intent into a plan and specs with fail-first checks; the loop runs to a dark deploy; the feature flag is the human control | Shaping ran once (`harness/bin/shape.sh`, `demo/recordings/shape/`): one intent became a plan and three draft specs whose checks all fail on today's code, for $0.21. Nothing it shaped has run. |
+
+`WORKBENCH_PHASE=1 harness/bin/dispatch.sh --dry-run` shows the same queue under another
+phase without editing anything (`demo/recordings/phase-forecasts.txt` has all four).
+
 ## Why humanize
 
 MIT licensed, pure Python, 744 tests that run in under five seconds, an active maintainer,
@@ -19,6 +35,9 @@ and a backlog of small, crisp issues. Every spec below is a real open upstream i
 
 | Piece | Where | What it shows |
 |---|---|---|
+| Phase | `harness/config.toml` `[harness] phase` | 0 to 3. Phase 0 runs nothing, phase 1 sends every PR to a person, phase 2 routes by class, phase 3 adds shaping. Every plan, forecast and decision records it. |
+| Intents | `intents/*.md` | Phase 3 input: what a person wants and why, with constraints and what is out of scope. No class, no checks: those are the shaper's to propose. |
+| Shaper | `harness/bin/shape.sh`, `harness/checks/shape_output.py`, `harness/bin/intake.sh` | Phase 3: a headless Claude session under the same sandbox and pack that may write only `specs/`, `harness/checks/` and `plans/`. The intake check requires draft specs whose checks fail on today's code. |
 | Specs | `specs/*.md` | Intent, constraints, out of scope and acceptance criteria as runnable checks. TOML front matter carries class, scope, checks and caps. |
 | Classes | `harness/classes.toml` | How a human approves each class: per PR, per batch, or graduated (merges by policy). |
 | Queue loop | `harness/bin/dispatch.sh` | Loop 4: the next approved specs, a forecast before any spend, a cap per wake-up, a timer. |
@@ -38,6 +57,10 @@ The four seeded specs:
 | `0002-bugfix-precisedelta-sign` | #379 | bugfix | Fail first: the check must fail on the base and pass on the result; per PR |
 | `0003-feature-natural-list-conjunction` | #214 | feature | Draft: Claude drafted it, nobody approved the intent, so it waits with no spend |
 | `0004-cli-entrypoint` | #184 | packaging (high risk) | Touches `pyproject.toml`: runs, then stops for a person at the PR, whatever the checks say |
+
+Three more specs, `0005` to `0007`, were not written by a person: the shaper produced them
+from `intents/0001-naturalday-weekdays.md` (issue #102) in the phase 3 run. They are drafts,
+so the queue waits on them (`WAIT ... intent not approved`) until a person approves one.
 
 ## Before the audience arrives (T minus 15 minutes)
 
@@ -61,7 +84,48 @@ Budget for the whole demo: about $1 (probe about $0.07, one task $0.30 to $0.80)
 recorded runs cost $0.59 (spec 0001), $0.90 (0002) and $0.64 (0004), as Claude Code
 estimates it.
 
-## The run (10 minutes)
+## The run (10 minutes, plus the two optional steps)
+
+### 0. Phase 0: the assessment, then the onboarding (optional, 2 minutes)
+
+```
+sed -n 1,25p demo/assess.md
+```
+
+**The audience sees** the headline (25 of 50) and the scored table: tests 4, CI 3, branch
+protection 0, CODEOWNERS 1, backlog 4, secrets 4, flag service 1, deploy 3, observability 2,
+eval seed 3. Every line rests on something observable in the repo or returned by `gh` to a
+read-only viewer; the file names the observation each time.
+
+**Say:** the assessment says which phase a repository can take today. This fork can take
+phase 1 now. Phase 2 merges by policy, so it waits for two gaps: `main` is unprotected and
+CI has never run on the fork. Phase 3 waits for a proving record and for the opt-in
+convention that plays the feature flag's part in a library.
+
+Then the onboarding, which is the other half of phase 0: after the assessment, the harness
+was installed in the fork, and the first spec followed. Nothing about the library changed.
+What arrived, all under version control beside the code:
+
+| Installed | Where | Why |
+|---|---|---|
+| Settings | `.claude/settings.json` (attended), `.claude/workbench/settings.template.json` (headless) | dontAsk mode, deny rules, the native sandbox with its allowed hosts, credential folders hidden, hooks wired to the trusted harness copy |
+| Pack | `harness/pack/` (policy and evidence mods) | A reasoned refusal before Claude Code's own denial, and an evidence stream for the packet |
+| Spec folder and templates | `specs/`, `intents/`, `harness/shaping/0000-shape.md`, `harness/guardrails/0000-guardrail-probe.md` | The unit of work, the phase 3 input, and the two fixed sessions (shaper, probe) |
+| Hooks | `harness/hooks/scope-guard.sh`, `harness/hooks/stop-checks.sh` | Loop 2: the scope held while Claude works; a finish blocked until the quick checks pass |
+| Checks and the re-run | `harness/checks/`, `harness/config.toml` `[setup]` and `[checks]` | The acceptance checks, and the suite run again in a fresh clone with no network after every session (the fork's own CI has not run yet, see the assessment) |
+| Router and classes | `harness/lib/`, `harness/classes.toml`, `harness/proofs/` | Decides from facts; the approval each class gets; the pass^k record graduation reads |
+| Evidence folder | `runs/` (local, ignored), `demo/recordings/` (kept) | One folder per task: plan, facts, verdict, decision, packet, the PR body |
+
+**Fallback (1 minute):** the onboarding as the fork's history, or as a file tree.
+
+```
+git log --oneline --reverse 785e5dc..HEAD -- harness specs intents .claude demo DEMO.md
+git ls-files harness .claude specs intents | sed -E 's,/[^/]+$,,' | sort | uniq -c
+```
+
+The first command shows the harness arriving on top of upstream's last commit (`785e5dc`),
+one piece per commit: harness, probe, queue loop, recordings, phases and shaping. The
+second shows the folders it added and how many files sit in each.
 
 ### 1. The spec is the unit of work (0:00 to 1:00)
 
@@ -187,6 +251,48 @@ router sends the next docs result down `graduated`, which `publish.sh` merges by
 change to the pack changes the pack id, and the class drops back to per batch until it is
 proven again.
 
+### 7. Phase 3: shaping, from an intent to specs (optional, 2 minutes)
+
+```
+cat intents/0001-naturalday-weekdays.md
+WORKBENCH_PHASE=3 harness/bin/shape.sh intents/0001-naturalday-weekdays.md
+```
+
+About two minutes and twenty cents (recorded: 6 turns, $0.21). The fork sits at phase 2, so
+the one-command override is needed and the first log line says so. **The audience sees** an
+intent a person documented (what, why, constraints, out of scope; no class, no checks), then
+the shaper's session, then what the harness verified about its output, none of it from the
+shaper's account:
+
+```
+files: 7 written; outside scope: none
+intake check: harness/checks/shape_output.py under bubblewrap, no network
+  PASS  3 spec file(s): 0005-..., 0006-..., 0007-...
+  PASS  plan plans/0001-naturalday-weekdays.md, 473 words
+  PASS  0005-feature-naturalday-weekday-future: fails on today's code (exit 1): python {harness}/checks/naturalday_weekday_future.py
+  ...
+forecast: what the queue would do with the proposals (nothing runs: they are drafts)
+  WAIT  0005-feature-naturalday-weekday-future  feature  intent not approved (draft): no spend until a person approves the spec
+done: 3 draft spec(s) for 0001-naturalday-weekdays, intake PASS, $0.21; 7 file(s) copied into the working tree, uncommitted.
+```
+
+Then open one of the proposals: `cat specs/0005-feature-naturalday-weekday-future.md` and
+`cat plans/0001-naturalday-weekdays.md`.
+
+**Say:** the shaper plans the work and writes the checks that will prove it was done; it
+writes no code. It could write only three folders, and the Stop hook would not let it finish
+until every check it wrote failed on today's code, because a check that passes today
+describes work that is already done. Its output is drafts. The queue waits on a draft, so the
+human control is exactly where it was: a person reads the plan, sets `status = "approved"` on
+the specs they want, and commits. In a system with a flag service, the same loop runs through
+to a dark deploy and the flag is that control.
+
+**Fallback (2 minutes):** `cat demo/recordings/shape/console.log`, then
+`demo/recordings/shape/intake.txt` and `demo/recordings/shape/proposals/`. The whole run is
+there: `intent.md`, `prompt.md`, `transcript.jsonl`, `settings.json`, `summary.json`,
+`forecast.txt`, `pack-evidence.jsonl`. `harness/bin/intake.sh specs/0005-*.md specs/0006-*.md
+specs/0007-*.md` repeats the intake check live on the working tree for nothing.
+
 ### If there is time, or questions: the queue loop, recorded
 
 One real dispatcher wake-up (`demo/recordings/dispatch-wakeup.log`) took the two approved
@@ -211,6 +317,8 @@ Any step can fall back to the recorded run, made on 12 October 2026 with this ex
 | 4 | `harness/bin/replay.sh` plays the recorded console at reading pace; `--fast` for a skim. |
 | 5 | Open the recorded PR: https://github.com/acn-yogi/humanize/pull/1 |
 | 6 | `harness/bin/approve-batch.sh docs-2026-10` reads the fork live; if GitHub is unreachable, show the PR labels in the recording. |
+| 0 | `demo/assess.md` is a file; the onboarding is `git log`, as in the step. |
+| 7 | `cat demo/recordings/shape/console.log` and the proposals beside it. |
 
 The recorded run is in `demo/recordings/t-01M4RYVYEG6H31MRD8C2N01K04/`: `console.log`, `spec.md`,
 `prompt.md`, `transcript.jsonl` (the worker), `review-transcript.jsonl`, `checks.log`,
@@ -240,6 +348,10 @@ Common live failures and the fix:
   sandbox or the checks after the session.
 - **Graduation is shown, not run.** No class here has a pass^k record yet; proving one costs
   k full runs.
+- **Phase 3 is shaping only.** The shaped specs have not run through a workbench, nothing
+  has been dark-deployed, and a library has no flag service: `demo/assess.md` says what
+  stands in for one. The phase setting changes routing and forecasts; it does not switch
+  on a merge path the assessment says the fork is not ready for.
 - **Windows needs WSL2.** The native sandbox covers shell commands on Linux, macOS and WSL2,
   not native Windows.
 
@@ -251,6 +363,9 @@ harness/bin/dispatch.sh --every 30           # the queue loop on a timer (or har
 harness/bin/workbench.sh specs/0002-bugfix-precisedelta-sign.md   # fail first, per PR
 harness/bin/workbench.sh specs/0004-cli-entrypoint.md            # high risk: stops for a person
 harness/bin/prove.sh specs/0001-docs-local-testing.md --k 3       # pass^3
+WORKBENCH_PHASE=1 harness/bin/dispatch.sh --dry-run               # the queue under phase 1
+WORKBENCH_PHASE=3 harness/bin/shape.sh intents/0001-naturalday-weekdays.md   # shape an intent
+harness/bin/intake.sh specs/0005-*.md specs/0006-*.md specs/0007-*.md       # the intake check, no spend
 ```
 
 Run output goes to `runs/` (git-ignored): one folder per task and one line per task in
