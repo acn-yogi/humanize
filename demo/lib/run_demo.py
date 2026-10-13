@@ -1642,7 +1642,79 @@ not say so to the index: the `Typing :: Typed` trove classifier is missing. Add 
         out = sh(["bash", str(ROOT / "harness/bin/cases.sh")], check=False)
         ok = "FAIL" not in out
         f.emit("milestone", "harness.casePasses", "Case passes: pyproject.toml now reads as a manifest" if ok else "Case FAILS", out.strip()[:400], "key" if ok else "warn", {"ok": ok, "output": out.strip()[:800]})
+        self.act5_proof()
         self.act_summary(5)
+
+    def act5_proof(self) -> None:
+        """The proving loop, replayed from its record (demo/recordings/audit and demo/recordings/proof): no spend.
+
+        Mine (the audit's top class), case, reproduce on the current pack, fix on a branch, prove on
+        the candidate pack with the regression suite and the judge, gate. Every number comes from the
+        files the loop wrote; a dry run and a live run read the same record.
+        """
+        f = self.feed
+        audit = json.loads((REC / "audit/audit.json").read_text(encoding="utf-8")) if (REC / "audit/audit.json").exists() else None
+        if not audit or not audit.get("classes"):
+            f.warn("prove.noRecord", "No audit record: run harness/bin/audit.sh and keep demo/recordings/audit/audit.txt", "")
+            return
+        top = audit["classes"][0]
+        f.emit("milestone", "prove.mined", f"Mined: {top['code']} on {top['tasks']} of {audit['summary']['tasks']} recorded tasks ({top['hits']} hits)",
+               f"harness/bin/audit.sh over {', '.join(audit['summary']['roots'])}: {top['description']}. Next class: "
+               + (f"{audit['classes'][1]['code']} on {audit['classes'][1]['tasks']}" if len(audit["classes"]) > 1 else "none") + ". No model asked; every hit names its file and line.",
+               "key", {"code": top["code"], "tasks": top["tasks"], "hits": top["hits"], "specs": top.get("specs", []), "ranked": [(c["code"], c["tasks"]) for c in audit["classes"]]})
+        # Every recorded proof, oldest first: the broad case (reproduced, not fixed) then the narrow one.
+        verdicts = []
+        for vf in sorted((REC / "proof").glob("*/verdict.json")):
+            try:
+                verdicts.append(json.loads(vf.read_text(encoding="utf-8")))
+            except (OSError, json.JSONDecodeError):
+                continue
+        # A broad case names its narrow half (narrowCase); the broad one is told first, then the narrow.
+        narrow = set()
+        for v in verdicts:
+            cf = ROOT / "harness/cases" / f"{v['case']}.json"
+            if cf.exists():
+                narrow.add((json.loads(cf.read_text(encoding="utf-8")).get("narrowCase")))
+        verdicts.sort(key=lambda x: (x["case"] in narrow, str(x.get("at", ""))))
+        if not verdicts:
+            f.warn("prove.noRecord", "No proof record yet: harness/bin/case-run.sh writes runs/proofs/<case>/, proof.py --record copies it", "")
+            return
+        fixed_shown: set[str] = set()
+        for v in verdicts:
+            self.act5_one_proof(v, fixed_shown)
+
+    def act5_one_proof(self, v: dict, fixed_shown: set) -> None:
+        f = self.feed
+        case = ROOT / "harness/cases" / f"{v['case']}.json"
+        c = json.loads(case.read_text(encoding="utf-8")) if case.exists() else {}
+        f.emit("milestone", "prove.case", f"Case: {v['case']} (spec {v['spec']}, k={v['k']}, {v.get('failureClass')})",
+               "; ".join(c.get("stateCheck", []))[:400] or "the state check is in the case file", "key",
+               {"case": v["case"], "spec": v["spec"], "k": v["k"], "failureClass": v.get("failureClass"), "reasonCode": v.get("reasonCode"),
+                "stateCheck": c.get("stateCheck", []), "reuse": c.get("reuse"), "path": f"harness/cases/{v['case']}.json"})
+        b = v["before"]
+        rows = "; ".join(f"trial {r['trial']} {r['outcome']}" + (f" ({r['why']})" if r.get("why") else "") for r in b.get("runs", []))
+        f.emit("milestone", "prove.reproduced", f"Reproduced on the current pack: pass^{v['k']} {b['passK']}, {b['passes']} of {b['trials']} passed, {money(b['costUsd'])}" if b["passes"] < b["trials"] else f"Not reproduced: {b['passes']} of {b['trials']} passed on the current pack",
+               rows[:400], "key" if b["passes"] < b["trials"] else "warn",
+               {"passK": b["passK"], "passes": b["passes"], "trials": b["trials"], "costUsd": b["costUsd"], "base": b.get("base"), "packIds": b.get("packIds", []), "runs": b.get("runs", [])})
+        fx = v.get("fix") or {}
+        if fx.get("branch") not in fixed_shown:
+            fixed_shown.add(fx.get("branch"))
+            f.emit("milestone", "prove.fixed", f"Fix on a branch: {fx.get('branch')} ({fx.get('sha')}), {len(fx.get('files', []))} file(s)",
+                   (", ".join(fx.get("files", [])) + (f"; {fx['diffstat']}" if fx.get("diffstat") else "") + ". " + (c.get("fixUnderTest") or ""))[:400], "key",
+                   {"branch": fx.get("branch"), "sha": fx.get("sha"), "files": fx.get("files", []), "commits": fx.get("commits", []), "case": v["case"]})
+        a = v["after"]
+        judges = [j["verdict"] for j in v.get("judge", [])]
+        rows = "; ".join(f"trial {r['trial']} {r['outcome']}" + (f" ({r['why']})" if r.get("why") else "") for r in a.get("runs", []))
+        f.emit("milestone", "prove.proven", f"Proved on the candidate pack: pass^{v['k']} {a['passK']}, {a['passes']} of {a['trials']} passed, {money(a['costUsd'])}; regressions {v.get('regressions')}; judge {', '.join(judges) or 'none'}",
+               (rows + ". Judge: " + "; ".join(f"{j['taskId'][-6:]} {j['verdict']}: {(j.get('reasons') or [''])[0]}" for j in v.get("judge", [])))[:400],
+               "key" if a["passK"] == 1 else "warn",
+               {"passK": a["passK"], "passes": a["passes"], "trials": a["trials"], "costUsd": a["costUsd"], "regressions": v.get("regressions"),
+                "judge": [{"taskId": j["taskId"], "verdict": j["verdict"], "quote": j.get("quote", "")[:300]} for j in v.get("judge", [])], "packIds": a.get("packIds", []), "runs": a.get("runs", [])})
+        ship = v["verdict"] == "SHIP"
+        f.emit("milestone", "prove.gate", f"Gate: {v['verdict']} for {v['case']}" + (": the fix merged, the case stays in harness/cases as a regression case" if ship else ": reproduced, not fixed; the case stays, the branch waits for a person"),
+               ("Reproduced, after pass^k 1, no regression, every judge verdict earned. " if ship else "; ".join(v.get("reasons", [])) + ". ")
+               + f"Spend: before {money(v['costUsd']['before'])}, after {money(v['costUsd']['after'])}, judge {money(v['costUsd']['judge'])}, total {money(v['costUsd']['total'])}.",
+               "key" if ship else "warn", {"verdict": v["verdict"], "reasons": v.get("reasons", []), "costUsd": v["costUsd"], "fixedIn": c.get("fixedIn"), "provenAt": c.get("provenAt")})
 
     # ---- Act 6: ready to release --------------------------------------------------------------
     def act6(self) -> None:

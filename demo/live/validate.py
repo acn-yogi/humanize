@@ -100,6 +100,17 @@ def main(argv: list[str]) -> int:
                         problems.append(f"events.jsonl:{n}: {ev['id']} data is missing {key}")
                 if ev.get("act") != 7:
                     problems.append(f"events.jsonl:{n}: {ev['id']} must carry act 7 (Triggers)")
+            # Act 5's proving-loop milestones carry a fixed data shape and act 5.
+            if isinstance(ev, dict) and ev.get("kind") == "milestone" and str(ev.get("id", "")).startswith("prove."):
+                need = {"prove.mined": ["code", "tasks", "hits"], "prove.case": ["case", "spec", "k"],
+                        "prove.reproduced": ["passK", "passes", "trials", "costUsd"], "prove.fixed": ["branch", "files"],
+                        "prove.proven": ["passK", "passes", "trials", "costUsd", "regressions", "judge"],
+                        "prove.gate": ["verdict", "reasons"]}.get(ev["id"], [])
+                for key in need:
+                    if key not in (ev.get("data") or {}):
+                        problems.append(f"events.jsonl:{n}: {ev['id']} data is missing {key}")
+                if ev.get("act") != 5:
+                    problems.append(f"events.jsonl:{n}: {ev['id']} must carry act 5 (The harness fixes itself)")
             events.append(ev)
         for a, b in zip(events, events[1:]):
             if isinstance(a, dict) and isinstance(b, dict) and str(a.get("ts")) > str(b.get("ts")):
