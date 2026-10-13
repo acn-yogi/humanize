@@ -1,0 +1,9 @@
+# Code owners for the fork. One maintainer by social fact, now encoded so a per_pr
+# route can request its reviewer and so the router can read ownership instead of
+# carrying it. Sensitive paths are listed on their own so the owner is explicit there.
+*            @acn-yogi
+/.github/    @acn-yogi
+/harness/    @acn-yogi
+/specs/      @acn-yogi
+/pyproject.toml  @acn-yogi
+/src/humanize/locale/  @acn-yogi
