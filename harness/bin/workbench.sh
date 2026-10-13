@@ -86,11 +86,14 @@ cp "${tdir}/plan.json" "${rdir}/plan.json"
 plan="${tdir}/plan.json"
 pj() { jq -r "$1" "$plan"; }
 [ "$(pj .status)" = approved ] || die "spec $(pj .id) is $(pj .status): a person approves the intent before any spend"
+[ "$(pj .kind)" = task ] || die "spec $(pj .id) is a $(pj .kind) spec, not a task: a workbench runs tasks only"
+# The phase: 0 runs nothing; 1 sends every PR to a person (the router does that); 2 and 3 run as the classes say.
+[ "$(pj .phase)" != 0 ] || die "phase 0 (assess): nothing runs until the readiness assessment is done (demo/assess.md); set harness/config.toml [harness] phase"
 # The pack id names everything that shapes a run: the pack, the hooks, the settings template.
 pack_id="pack-$(cd "$T" && find harness/pack harness/hooks .claude/workbench -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -c1-12)"
 
 caps() { pj ".caps.$1"; }
-log "task ${task_id}: spec $(pj .id) (class $(pj .class)) on ${base} at ${base_sha:0:12}, ${pack_id}"
+log "task ${task_id}: spec $(pj .id) (class $(pj .class)) on ${base} at ${base_sha:0:12}, ${pack_id}, phase $(pj .phase) ($(pj .phaseName))"
 event "${tdir}/loops.jsonl" --arg loop task --arg event start --arg taskId "$task_id" --arg spec "$(pj .id)" --arg packId "$pack_id"
 started_at="$(date -u +%FT%TZ)"
 

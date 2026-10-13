@@ -33,6 +33,11 @@ approval = "per_pr"
 risk = "high"
 graduated = false
 
+[classes.shaping]
+description = "Phase 3 only: a plan and draft specs shaped from a documented intent; never code"
+approval = "per_pr"      # a person approves each draft spec before any workbench runs it
+graduated = false
+
 [batches.docs-2026-10]
 # One human yes for the whole batch plan. Each instance still passes its own checks and review.
 approved = true

@@ -75,6 +75,15 @@ if (scope.harness.length > 0) {
   if (decision.path === "per_pr" && decision.reasons[0] === "class not graduated") {
     decision.reasons[0] = `class ${plan.class} is approved per PR (harness/classes.toml)`;
   }
+  // The phase (harness/config.toml [harness] phase). Below phase 2 nothing merges by policy:
+  // phase 1 is assisted, so every PR goes to a person, whatever the class row says. Phase 0
+  // runs nothing at all; a result that somehow reached the router is halted.
+  const phase: number = typeof plan?.phase === "number" ? plan.phase : 2;
+  if (phase === 0) {
+    decision = { path: "reject", reasons: ["phase 0 (assess): nothing runs until the readiness assessment is done", ...decision.reasons] };
+  } else if (phase === 1 && (decision.path === "batch_plan" || decision.path === "graduated")) {
+    decision = { path: "per_pr", reasons: ["phase 1 (assisted): a person reviews every PR", ...decision.reasons] };
+  }
 }
 
 const out = {
@@ -82,6 +91,7 @@ const out = {
   spec: plan?.id ?? null,
   className: plan?.class ?? null,
   ...decision,
+  phase: plan?.phase ?? null,
   packId,
   // What happens next, in words a reviewer reads on the PR.
   next: {

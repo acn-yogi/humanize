@@ -1,6 +1,23 @@
 # Workbench demo harness. The runner reads this file from the BASE commit, never from a
 # task's result, so a task cannot loosen its own harness.
 
+[harness]
+# Which phase of the adoption model this repository is in. The dispatcher's forecast, the
+# router and the shaper all read it (harness/lib/plan.py puts it in every plan).
+#
+#   0  Assess          nothing runs; the readiness assessment (demo/assess.md) comes first
+#   1  Assisted        people write the specs, Claude writes the code and opens PRs, and a
+#                      person reviews and merges every PR (the router sends every result to per_pr)
+#   2  Autonomous      by class: approved batches and graduated classes merge by policy, and
+#                      only high-value or high-risk PRs reach a person (the routing that ran here)
+#   3  Self-improving  the proving loop plus shaping: harness/bin/shape.sh turns a documented
+#                      intent (intents/) into a plan and draft specs with fail-first checks
+#
+# A later phase keeps everything an earlier one allows. An operator may try another phase for
+# one command with WORKBENCH_PHASE=N (the output says so); a task cannot, because a task never
+# sees the operator's environment.
+phase = 2
+
 [github]
 # PRs open on this fork and nowhere else. publish.sh refuses any other repository.
 repo = "acn-yogi/humanize"
@@ -12,6 +29,9 @@ base = "main"
 # The author and the adversarial reviewer are different models on purpose.
 worker = "sonnet"
 reviewer = "opus"
+# The shaper (phase 3) plans and writes specs, never code. Its output is draft specs a person
+# approves, so the cheaper model is enough; the fail-first checks catch a weak spec.
+shaper = "sonnet"
 
 [caps]
 # Ceilings for every loop. A spec may lower any of these, never raise them.

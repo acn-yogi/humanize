@@ -4,11 +4,16 @@
     plan.py plan <harness dir> <spec.md>          -> plan JSON on stdout
     plan.py scope <plan.json> <path>...            -> JSON list of paths outside the spec's scope
     plan.py queue <harness dir> <specs dir>        -> JSON list of plans, one per spec file
+    plan.py phase <harness dir>                    -> the phase, as JSON {phase, name, source}
 
 A spec is Markdown with TOML front matter between two "+++" lines. The front matter carries
 what machines act on (class, scope, checks, caps); the Markdown body carries what the human
 approved (intent, constraints, out of scope, acceptance criteria) and is the prompt Claude
 gets. Caps in a spec may lower the harness ceilings in config.toml, never raise them.
+
+Every plan carries the harness phase (config.toml [harness] phase, 0 to 3), which the
+dispatcher's forecast, the router and the shaper honour. WORKBENCH_PHASE in the operator's
+environment overrides it for one command; the plan records which source it came from.
 
 Standard library only (Python 3.11+ for tomllib), so it runs before any install.
 """
@@ -17,6 +22,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import os
 import re
 import sys
 import tomllib
@@ -24,9 +30,19 @@ from pathlib import Path
 
 ID_RE = re.compile(r"^[0-9]{4}-[a-z0-9][a-z0-9-]{1,60}$")
 STATUSES = {"draft", "approved", "parked"}
+KINDS = {"task", "shape"}
+PHASES = {0: "assess", 1: "assisted", 2: "autonomous by class", 3: "self-improving"}
 # Paths no task may change, whatever its spec says: the harness judges the work, so the
-# work never edits the harness.
-HARNESS_PATHS = ["harness/**", "specs/**", ".claude/**", "DEMO.md", "demo/**", "CLAUDE.md"]
+# work never edits the harness. Intents and plans are what people approve; specs are what
+# the harness runs; none of them is a task's to change.
+HARNESS_PATHS = ["harness/**", "specs/**", "intents/**", "plans/**", ".claude/**", "DEMO.md", "demo/**", "CLAUDE.md"]
+# A shaping session (phase 3) proposes specs, checks and a plan, all as drafts a person
+# approves. Everything else in the harness stays closed to it.
+SHAPE_HARNESS_PATHS = [
+    "harness/bin/**", "harness/lib/**", "harness/hooks/**", "harness/pack/**", "harness/proofs/**",
+    "harness/guardrails/**", "harness/shaping/**", "harness/systemd/**", "harness/config.toml",
+    "harness/classes.toml", "harness/.gitattributes", "intents/**", ".claude/**", "DEMO.md", "demo/**", "CLAUDE.md",
+]
 
 
 def fail(msg: str) -> None:
@@ -54,10 +70,27 @@ def str_list(value, what: str) -> list[str]:
     return value
 
 
+def read_phase(config: dict) -> dict:
+    """The harness phase: WORKBENCH_PHASE from the operator's environment, else config.toml."""
+    source = "harness/config.toml"
+    raw = config.get("harness", {}).get("phase", 2)
+    env = os.environ.get("WORKBENCH_PHASE")
+    if env is not None and env != "":
+        raw, source = env, "WORKBENCH_PHASE (operator override for this command)"
+    try:
+        phase = int(raw)
+    except (TypeError, ValueError):
+        fail(f"phase must be a whole number 0 to 3, not {raw!r} (from {source})")
+    if phase not in PHASES:
+        fail(f"phase must be 0 to 3, not {phase} (from {source})")
+    return {"phase": phase, "name": PHASES[phase], "source": source}
+
+
 def build_plan(harness: Path, spec_path: Path) -> dict:
     config = tomllib.loads((harness / "config.toml").read_text(encoding="utf-8"))
     classes = tomllib.loads((harness / "classes.toml").read_text(encoding="utf-8"))
     meta, body = read_front_matter(spec_path)
+    phase = read_phase(config)
 
     spec_id = meta.get("id")
     if not isinstance(spec_id, str) or not ID_RE.match(spec_id):
@@ -67,6 +100,9 @@ def build_plan(harness: Path, spec_path: Path) -> dict:
     status = meta.get("status", "draft")
     if status not in STATUSES:
         fail(f"{spec_path}: status must be one of {sorted(STATUSES)}")
+    kind = meta.get("kind", "task")
+    if kind not in KINDS:
+        fail(f"{spec_path}: kind must be one of {sorted(KINDS)}")
     cls = meta.get("class")
     class_row = classes.get("classes", {}).get(cls)
     if class_row is None:
@@ -95,12 +131,14 @@ def build_plan(harness: Path, spec_path: Path) -> dict:
         "file": str(spec_path),
         "title": meta.get("title", spec_id),
         "issue": meta.get("issue"),
+        "intent": meta.get("intent"),
+        "kind": kind,
         "class": cls,
         "classRow": class_row,
         "status": status,
         "approvedBy": meta.get("approved_by"),
         "scope": str_list(meta.get("scope"), "scope"),
-        "harnessPaths": HARNESS_PATHS,
+        "harnessPaths": SHAPE_HARNESS_PATHS if kind == "shape" else HARNESS_PATHS,
         "checks": {
             "quick": str_list(checks.get("quick"), "checks.quick"),
             "acceptance": str_list(config["checks"]["always"], "config checks.always")
@@ -112,6 +150,9 @@ def build_plan(harness: Path, spec_path: Path) -> dict:
         "models": config["models"],
         "github": config["github"],
         "sandbox": config["sandbox"],
+        "phase": phase["phase"],
+        "phaseName": phase["name"],
+        "phaseSource": phase["source"],
         "batchPlanId": batch_id,
         "batchPlanRow": ({"class": f"batch:{batch_id}", **batch_row} if batch_row else None),
         "body": body,
@@ -143,8 +184,11 @@ def main(argv: list[str]) -> None:
     elif len(argv) == 3 and argv[0] == "queue":
         specs = sorted(Path(argv[2]).glob("[0-9][0-9][0-9][0-9]-*.md"))
         print(json.dumps([build_plan(Path(argv[1]), s) for s in specs]))
+    elif len(argv) == 2 and argv[0] == "phase":
+        config = tomllib.loads((Path(argv[1]) / "config.toml").read_text(encoding="utf-8"))
+        print(json.dumps(read_phase(config)))
     else:
-        fail("usage: plan.py plan <harness> <spec> | scope <plan.json> <path>... | queue <harness> <specs>")
+        fail("usage: plan.py plan <harness> <spec> | scope <plan.json> <path>... | queue <harness> <specs> | phase <harness>")
 
 
 if __name__ == "__main__":
