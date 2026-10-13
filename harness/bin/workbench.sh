@@ -25,7 +25,7 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck source=../lib/common.sh
 . "${REPO}/harness/lib/common.sh"
 
-spec="" base="" publish=1 review=1 out="${REPO}/runs" trial=""
+spec="" base="" publish=1 review=1 out="${REPO}/runs" trial="" retries=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --base) base="${2:?}"; shift 2 ;;
@@ -33,6 +33,7 @@ while [ $# -gt 0 ]; do
     --no-review) review=0; shift ;;
     --out) out="${2:?}"; shift 2 ;;
     --trial) trial="${2:?}"; shift 2 ;;
+    --retries) retries="${2:?}"; shift 2 ;;   # lower the retry cap for this run (a proof trial scores round 0)
     -*) die "unknown option: $1" ;;
     *) spec="$1"; shift ;;
   esac
@@ -82,6 +83,11 @@ trap cleanup EXIT
 g -C "$REPO" archive "$base_sha" harness .claude specs | tar -x -C "${tdir}/trusted"
 T="${tdir}/trusted"
 python3 "${T}/harness/lib/plan.py" plan "${T}/harness" "${T}/${spec_rel}" > "${tdir}/plan.json"
+if [ -n "$retries" ]; then
+  # Like a spec's caps: --retries may lower the ceiling, never raise it.
+  [[ "$retries" =~ ^[0-9]+$ ]] || die "--retries takes a whole number"
+  jq --argjson n "$retries" '.caps.retries = ([.caps.retries, $n] | min)' "${tdir}/plan.json" > "${tdir}/plan.json.tmp" && mv "${tdir}/plan.json.tmp" "${tdir}/plan.json"
+fi
 cp "${tdir}/plan.json" "${rdir}/plan.json"
 plan="${tdir}/plan.json"
 pj() { jq -r "$1" "$plan"; }

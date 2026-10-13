@@ -102,6 +102,12 @@ class CheckTests(unittest.TestCase):
         self.assertIn("t-FIXTURESTOPHOOK", self.tasks("STOP_HOOK_BLOCKED"))
         self.assertEqual(self.by_code["STOP_HOOK_BLOCKED"]["severity"], "WARN")
 
+    def test_session_error_is_a_warning_and_skips_the_other_checks(self):
+        self.assertIn("t-FIXTURESESSERR", self.tasks("SESSION_ERROR"))
+        self.assertEqual(self.by_code["SESSION_ERROR"]["severity"], "WARN")
+        for code in ("NO_TOOL_CALL", "CLAIMED_SUCCESS_NO_STATE", "UNSOURCED_SPECIFIC"):
+            self.assertNotIn("t-FIXTURESESSERR", self.tasks(code))
+
     def test_lint_failed(self):
         self.assertIn("t-FIXTURELINT", self.tasks("LINT_FAILED"))
         self.assertIn("t-FIXTURELINT", self.tasks("REVIEW_REJECTED"))

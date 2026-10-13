@@ -1,0 +1,3 @@
+{"type":"system","subtype":"init","session_id":"s-fixture"}
+{"type":"assistant","message":{"content":[{"type":"text","text":"API Error: Unable to connect to API: Self-signed certificate detected (SELF_SIGNED_CERT_IN_CHAIN)."}]}}
+{"type":"result","subtype":"success","is_error":true,"num_turns":1,"total_cost_usd":0,"session_id":"s-fixture","permission_denials":[],"result":"API Error: Unable to connect to API: Self-signed certificate detected (SELF_SIGNED_CERT_IN_CHAIN)."}

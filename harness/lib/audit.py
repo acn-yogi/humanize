@@ -54,8 +54,10 @@ SEVERITY = {
     "UNSOURCED_SPECIFIC": "FAIL",
     "NO_TOOL_CALL": "FAIL",
     "STOP_HOOK_BLOCKED": "WARN",
+    "SESSION_ERROR": "WARN",
 }
 DESCRIPTION = {
+    "SESSION_ERROR": "the session ended on an API or network error (an error of the environment, not of the trajectory; the other checks skip it)",
     "REVIEW_REJECTED": "the adversarial reviewer rejected a round",
     "LINT_FAILED": "lint findings in the reviewer's reasons or the check output",
     "CLAIMED_SUCCESS_NO_STATE": "the final message claims done; the packet or the Stop hook says otherwise",
@@ -321,8 +323,15 @@ def check_task(t: TaskRecord, cwd: Path) -> list[Hit]:
 
     # Worker sessions: one per round (round 1 is the --resume continuation).
     calls_so_far: list[ToolCall] = []
+    for tr in t.reviewer:
+        if tr.is_error and tr.final_text.startswith("API Error"):
+            hit("SESSION_ERROR", tr.file, tr.final_line, tr.index, tr.turns, f"reviewer: {tr.final_text[:160]}")
     for rnd, tr in enumerate(t.worker):
         calls_so_far = calls_so_far + tr.tool_calls
+        if tr.is_error and tr.final_text.startswith("API Error"):
+            # The API or the network failed under the session: nothing it did or claimed is evidence.
+            hit("SESSION_ERROR", tr.file, tr.final_line, rnd, tr.turns, f"worker: {tr.final_text[:160]}")
+            continue
         if not tr.tool_calls:
             hit("NO_TOOL_CALL", tr.file, tr.first_line, rnd, None, "the session called no tool at all")
         elif not any(CHECK_RE.search(c.input) for c in tr.tool_calls):

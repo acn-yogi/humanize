@@ -1,0 +1,1 @@
+{"v":1,"taskId":"t-FIXTURESESSERR","spec":{"id":"0002-bugfix-precisedelta-sign","class":"bugfix"},"allChecksPass":false,"changedPaths":[],"review":null,"baseCommit":"0000000000000000000000000000000000000000","headCommit":"0000000000000000000000000000000000000000","costUsd":0,"decision":{"path":"reject"}}
