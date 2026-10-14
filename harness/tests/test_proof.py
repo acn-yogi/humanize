@@ -32,13 +32,28 @@ def summary(pack, outcomes, base="main", fingerprints=None):
 
 
 class ProofTests(unittest.TestCase):
-    def make(self, before, after, judges=("earned", "earned", "earned"), cases="PASS  x\nPASS  y\n", before_fp=None, after_fp=None):
+    def make(self, before, after, judges=("earned", "earned", "earned"), cases="PASS  x\nPASS  y\n", before_fp=None, after_fp=None,
+             control=None, holdout=None, held=None):
         d = Path(self.tmp.name)
         (d / "harness/cases").mkdir(parents=True, exist_ok=True)
-        (d / "harness/cases/c.json").write_text(json.dumps({"id": "c", "kind": "trajectory", "spec": "0002-bugfix-precisedelta-sign", "k": 3, "failureClass": "REVIEW_REJECTED", "reasonCode": "lint", "fixBranch": "harness/x"}), encoding="utf-8")
+        case = {"id": "c", "kind": "trajectory", "spec": "0002-bugfix-precisedelta-sign", "k": 3, "failureClass": "REVIEW_REJECTED", "reasonCode": "lint", "fixBranch": "harness/x"}
+        if holdout:
+            case["holdout"] = holdout
+        (d / "harness/cases/c.json").write_text(json.dumps(case), encoding="utf-8")
         p = d / "runs/proofs/c"
         (p / "current").mkdir(parents=True, exist_ok=True)
         (p / "candidate").mkdir(parents=True, exist_ok=True)
+        if control is not None:
+            (p / "control").mkdir(parents=True, exist_ok=True)
+            (p / "control/summary.json").write_text(json.dumps(summary("control", control)), encoding="utf-8")
+        for cid, (hb, ha) in (held or {}).items():
+            hp = d / "runs/proofs" / cid
+            (hp / "current").mkdir(parents=True, exist_ok=True)
+            (hp / "candidate").mkdir(parents=True, exist_ok=True)
+            if hb is not None:
+                (hp / "current/summary.json").write_text(json.dumps(summary("current", hb)), encoding="utf-8")
+            if ha is not None:
+                (hp / "candidate/summary.json").write_text(json.dumps(summary("candidate", ha, "harness/x")), encoding="utf-8")
         if before is not None:
             (p / "current/summary.json").write_text(json.dumps(summary("current", before, fingerprints=before_fp)), encoding="utf-8")
         if after is not None:
@@ -113,6 +128,67 @@ class ProofTests(unittest.TestCase):
         v = self.make(["fail", "pass", "fail"], ["pass", "pass", "pass"])
         self.assertEqual(v["fingerprint"]["comparison"], "fingerprint-not-recorded")
         self.assertEqual(v["verdict"], "SHIP")
+
+    def test_no_control_arm_says_the_floor_is_not_measured_and_does_not_block(self):
+        v = self.make(["fail", "pass", "fail"], ["pass", "pass", "pass"])
+        self.assertFalse(v["control"]["present"])
+        self.assertIsNone(v["control"]["noiseFloor"])
+        self.assertEqual(v["verdict"], "SHIP")
+        self.assertIn("control: no control arm: noise floor not measured", proof.table(v))
+
+    def test_a_delta_inside_the_noise_floor_is_too_small_to_see(self):
+        # Current pack twice: 1 of 3 then 3 of 3, a spread of 0.67; the candidate's 3 of 3 is inside it.
+        v = self.make(["fail", "pass", "fail"], ["pass", "pass", "pass"], control=["pass", "pass", "pass"])
+        self.assertTrue(v["control"]["present"])
+        self.assertAlmostEqual(v["control"]["noiseFloor"], 0.6667)
+        self.assertAlmostEqual(v["control"]["delta"], 0.6667)
+        self.assertTrue(v["control"]["tooSmallToSee"])
+        self.assertEqual(v["verdict"], "NO-SHIP")
+        self.assertTrue(any(r.startswith("too-small-to-see") for r in v["reasons"]))
+        self.assertIn("too small to see", proof.table(v))
+
+    def test_a_delta_outside_the_noise_floor_ships(self):
+        # Current pack twice: 0 of 3 both times, floor 0; the candidate's 3 of 3 is a real move.
+        v = self.make(["fail", "fail", "fail"], ["pass", "pass", "pass"], control=["fail", "fail", "fail"])
+        self.assertEqual(v["control"]["noiseFloor"], 0.0)
+        self.assertFalse(v["control"]["tooSmallToSee"])
+        self.assertEqual(v["verdict"], "SHIP")
+        self.assertAlmostEqual(v["costUsd"]["control"], 1.2)
+        self.assertAlmostEqual(v["costUsd"]["total"], 1.2 * 3 + 0.15)
+
+    def test_no_holdout_says_the_suite_is_too_small(self):
+        v = self.make(["fail", "pass", "fail"], ["pass", "pass", "pass"])
+        self.assertFalse(v["holdout"]["present"])
+        self.assertIn("holdout: no holdout: suite too small", proof.table(v))
+
+    def test_the_held_out_delta_is_reported_apart(self):
+        v = self.make(["fail", "fail", "fail"], ["pass", "pass", "pass"], holdout=["h1", "h2"],
+                      held={"h1": (["fail", "fail", "pass"], ["pass", "pass", "pass"]), "h2": (["fail", "fail", "fail"], ["fail", "fail", "fail"])})
+        h = v["holdout"]
+        self.assertTrue(h["present"])
+        self.assertEqual([r["case"] for r in h["cases"]], ["h1", "h2"])
+        self.assertAlmostEqual(h["beforeRate"], 1 / 6, places=3)
+        self.assertAlmostEqual(h["afterRate"], 0.5)
+        self.assertAlmostEqual(h["delta"], 1 / 3, places=3)
+        self.assertEqual(h["unrun"], [])
+        text = proof.table(v)
+        self.assertIn("holdout (2 case(s) the improver never read)", text)
+        self.assertIn("h2", text)
+        # The training case still ships: the held-out delta is reported, not gated on, until the suite can be split.
+        self.assertEqual(v["verdict"], "SHIP")
+
+    def test_a_held_out_case_not_yet_run_is_named(self):
+        v = self.make(["fail", "fail", "fail"], ["pass", "pass", "pass"], holdout=["h1"], held={"h1": (["fail", "pass", "pass"], None)})
+        self.assertEqual(v["holdout"]["unrun"], ["h1"])
+        self.assertIn("not run on both packs yet", v["holdout"]["note"])
+
+    def test_case_write_carries_control_and_holdout(self):
+        v = self.make(["fail", "fail", "fail"], ["pass", "pass", "pass"], control=["fail", "fail", "fail"], holdout=["h1"],
+                      held={"h1": (["fail"], ["pass"])})
+        case = json.loads(proof.write_case(Path(self.tmp.name), v).read_text(encoding="utf-8"))
+        self.assertEqual(case["proof"]["control"], {"noiseFloor": 0.0, "delta": 1.0, "tooSmallToSee": False})
+        self.assertEqual(case["proof"]["holdout"]["cases"], ["h1"])
+        self.assertEqual(case["proof"]["fingerprint"], "fingerprint-not-recorded")
 
     def test_table_and_case_write(self):
         v = self.make(["fail", "pass", "fail"], ["pass", "pass", "pass"])

@@ -4,13 +4,19 @@
     proof.py <repo root> <case id> [--fix-branch BRANCH] [--cases-output FILE] [--write-case] [--record]
 
 Reads runs/proofs/<case>/current/summary.json (the reproduce step), runs/proofs/<case>/candidate/
-summary.json (the prove step), every candidate trial's judge.json (both trajectories) and the
+summary.json (the prove step), runs/proofs/<case>/control/summary.json when present (the
+no-change control: the current pack run a second time, so the spread between the two
+current-pack runs is a measured noise floor), the case's held-out cases' summaries when the
+case names a "holdout" list, every candidate trial's judge.json (both trajectories) and the
 regression suite's output (harness/bin/cases.sh, saved to a file), and writes
 runs/proofs/<case>/verdict.json and verdict.txt.
 
 SHIP only when: the case failed at least once on the current pack (reproduced), after pass^k is
-1, the regression suite has no FAIL, and every judge verdict is "earned" (at least one judge).
-Anything else is NO-SHIP with the reasons named. --write-case puts the proof on the case in
+1, the regression suite has no FAIL, every judge verdict is "earned" (at least one judge), the
+fingerprints of before and after agree beyond the pack id, and, when a control arm exists, the
+after-minus-before delta is outside the noise floor (inside it is "too-small-to-see").
+The held-out delta is reported apart when a holdout exists; "no holdout: suite too small"
+otherwise. Anything else is NO-SHIP with the reasons named. --write-case puts the proof on the case in
 harness/cases/<case>.json (proof, status, fixedIn, provenAt) whatever the verdict, so the suite
 lists it; --record copies the proof folder (without bundles) to demo/recordings/proof/.
 Standard library only.
@@ -50,11 +56,54 @@ def side(summary: dict | None) -> dict:
             "runs": [{k: r.get(k) for k in ("trial", "taskId", "outcome", "why", "checksPass", "reviewVerdict0", "ruffOk", "ruffFindings", "stopBlocks", "costUsd", "workerTurns")} for r in summary.get("runs") or []]}
 
 
+def rate(s: dict) -> float | None:
+    return round(s["passes"] / s["trials"], 4) if s.get("trials") else None
+
+
+def control_arm(before: dict, control: dict | None, after: dict) -> dict:
+    """The noise floor: the spread between the two current-pack runs (reproduce and control).
+    A delta inside it is too small to see. Without a control arm the floor is not measured."""
+    if not control or not control.get("trials") or not before["trials"]:
+        return {"present": False, "note": "no control arm: noise floor not measured (case-run.sh --pack control runs the current pack again)",
+                "noiseFloor": None, "delta": None, "tooSmallToSee": False, "control": control}
+    floor = round(abs(rate(before) - rate(control)), 4)
+    delta = round(rate(after) - rate(before), 4) if after["trials"] else None
+    too_small = delta is not None and abs(delta) <= floor
+    return {"present": True, "noiseFloor": floor, "delta": delta, "tooSmallToSee": too_small,
+            "beforeRate": rate(before), "controlRate": rate(control), "afterRate": rate(after) if after["trials"] else None, "control": control}
+
+
+def holdout_arm(root: Path, case: dict) -> dict:
+    """The held-out cases' delta, apart from the training case's. The improver never reads them."""
+    ids = [str(x) for x in (case.get("holdout") or [])]
+    if not ids:
+        return {"present": False, "note": "no holdout: suite too small", "cases": []}
+    rows = []
+    b_pass = b_trials = a_pass = a_trials = 0
+    for cid in ids:
+        b = side(load(root / "runs/proofs" / cid / "current/summary.json"))
+        a = side(load(root / "runs/proofs" / cid / "candidate/summary.json"))
+        rows.append({"case": cid, "before": {"passes": b["passes"], "trials": b["trials"], "passK": b["passK"]},
+                     "after": {"passes": a["passes"], "trials": a["trials"], "passK": a["passK"]},
+                     "delta": (round(rate(a) - rate(b), 4) if b["trials"] and a["trials"] else None)})
+        b_pass += b["passes"]; b_trials += b["trials"]; a_pass += a["passes"]; a_trials += a["trials"]
+    before_rate = round(b_pass / b_trials, 4) if b_trials else None
+    after_rate = round(a_pass / a_trials, 4) if a_trials else None
+    unrun = [r["case"] for r in rows if r["before"]["trials"] == 0 or r["after"]["trials"] == 0]
+    return {"present": True, "cases": rows, "beforeRate": before_rate, "afterRate": after_rate,
+            "delta": (round(after_rate - before_rate, 4) if before_rate is not None and after_rate is not None else None),
+            "unrun": unrun, "note": ("held-out delta measured on cases the improver never read" if not unrun else
+                                     "held-out cases not run on both packs yet: " + ", ".join(unrun) + " (case-run.sh --holdout)")}
+
+
 def build(root: Path, case_id: str, fix_branch: str | None, cases_output: str | None) -> dict:
     case = load(root / "harness/cases" / f"{case_id}.json") or {}
     pdir = root / "runs/proofs" / case_id
     before = side(load(pdir / "current/summary.json"))
     after = side(load(pdir / "candidate/summary.json"))
+    control_summary = load(pdir / "control/summary.json")
+    control = control_arm(before, side(control_summary) if control_summary else None, after)
+    holdout = holdout_arm(root, case)
     judges = []
     for r in after["runs"]:
         j = load(pdir / "candidate" / str(r.get("taskId") or "") / "judge.json") if r.get("taskId") else None
@@ -100,16 +149,21 @@ def build(root: Path, case_id: str, fix_branch: str | None, cases_output: str | 
     comparison = fingerprint.compare(before["fingerprints"], after["fingerprints"]) if before["trials"] and after["trials"] else {"comparison": "fingerprint-not-recorded", "differences": []}
     if comparison["comparison"] == "invalid-fingerprint":
         reasons.append("invalid-fingerprint: before and after ran on different environments (" + "; ".join(comparison["differences"]) + "); rerun the before side on the current environment")
+    # The no-change control: a delta inside the spread of two current-pack runs is noise.
+    if control["present"] and control["tooSmallToSee"]:
+        reasons.append(f"too-small-to-see: after minus before is {control['delta']:+.2f}, inside the noise floor {control['noiseFloor']:.2f} "
+                       f"(current pack twice: {control['beforeRate']:.2f} and {control['controlRate']:.2f})")
     judge_cost = round(sum(float(j.get("costUsd") or 0) for j in judges), 4)
+    control_cost = round(float((control.get("control") or {}).get("costUsd") or 0), 4)
     return {
         "v": 1, "case": case_id, "spec": case.get("spec"), "k": case.get("k", after.get("k") or before.get("k")),
         "failureClass": case.get("failureClass"), "reasonCode": case.get("reasonCode"),
         "before": before, "after": after, "regressions": regressions, "casesOutput": cases_output or "",
-        "fingerprint": comparison,
+        "fingerprint": comparison, "control": control, "holdout": holdout,
         "judge": judges, "fix": fix,
-        "costUsd": {"before": before["costUsd"], "after": after["costUsd"], "judge": judge_cost,
+        "costUsd": {"before": before["costUsd"], "after": after["costUsd"], "control": control_cost, "judge": judge_cost,
                     "interrupted": round(before["interruptedCostUsd"] + after["interruptedCostUsd"], 4),
-                    "total": round(before["costUsd"] + after["costUsd"] + judge_cost + before["interruptedCostUsd"] + after["interruptedCostUsd"], 4)},
+                    "total": round(before["costUsd"] + after["costUsd"] + control_cost + judge_cost + before["interruptedCostUsd"] + after["interruptedCostUsd"], 4)},
         "verdict": "SHIP" if not reasons else "NO-SHIP", "reasons": reasons,
         "at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -155,6 +209,24 @@ def table(v: dict) -> str:
     for line in (v.get("casesOutput") or "").splitlines():
         w(f"  {line}")
     w("")
+    c = v.get("control") or {}
+    if c.get("present"):
+        ctl = c.get("control") or {}
+        w(f"control (current pack again): {ctl.get('passes')} of {ctl.get('trials')} passed; noise floor {c['noiseFloor']:.2f} "
+          f"(reproduce {c['beforeRate']:.2f} vs control {c['controlRate']:.2f}); after minus before {c['delta']:+.2f}"
+          + (" -> too small to see" if c["tooSmallToSee"] else " -> outside the noise" if c["delta"] is not None else ""))
+    else:
+        w(f"control: {c.get('note', 'none')}")
+    h = v.get("holdout") or {}
+    if h.get("present"):
+        w(f"holdout ({len(h['cases'])} case(s) the improver never read): before {h['beforeRate']} after {h['afterRate']}"
+          + (f", delta {h['delta']:+.2f}" if h.get("delta") is not None else "") + f"; {h['note']}")
+        for r in h["cases"]:
+            w(f"  {r['case']:<28} before {r['before']['passes']} of {r['before']['trials']}, after {r['after']['passes']} of {r['after']['trials']}"
+              + (f", delta {r['delta']:+.2f}" if r.get("delta") is not None else ""))
+    else:
+        w(f"holdout: {h.get('note', 'no holdout: suite too small')}")
+    w("")
     w("judge (both trajectories, a different model):")
     for j in v["judge"] or []:
         w(f"  {j['taskId']}  {j['verdict']}  ({j.get('model')}, ${float(j.get('costUsd') or 0):.2f}, quote found: {j.get('quoteFound')})")
@@ -166,7 +238,7 @@ def table(v: dict) -> str:
         w("  none")
     w("")
     c = v["costUsd"]
-    w(f"spend: before ${c['before']:.2f}, after ${c['after']:.2f}, judge ${c['judge']:.2f}, interrupted ${c.get('interrupted', 0):.2f}, total ${c['total']:.2f}")
+    w(f"spend: before ${c['before']:.2f}, after ${c['after']:.2f}, control ${c.get('control', 0):.2f}, judge ${c['judge']:.2f}, interrupted ${c.get('interrupted', 0):.2f}, total ${c['total']:.2f}")
     w(f"verdict: {v['verdict']}" + (": " + "; ".join(v["reasons"]) if v["reasons"] else " (reproduced, after pass^k 1, no regression, every judge verdict earned)"))
     return "\n".join(out)
 
@@ -179,6 +251,10 @@ def write_case(root: Path, v: dict) -> Path:
         "before": {k: v["before"][k] for k in ("passK", "passes", "trials", "errors", "costUsd", "base", "baseSha", "packIds")},
         "after": {k: v["after"][k] for k in ("passK", "passes", "trials", "errors", "costUsd", "base", "baseSha", "packIds")},
         "regressions": v["regressions"],
+        "fingerprint": (v.get("fingerprint") or {}).get("comparison"),
+        "control": ({k: v["control"].get(k) for k in ("noiseFloor", "delta", "tooSmallToSee")} if (v.get("control") or {}).get("present") else None),
+        "holdout": ({k: v["holdout"].get(k) for k in ("beforeRate", "afterRate", "delta")} | {"cases": [r["case"] for r in v["holdout"]["cases"]]}
+                    if (v.get("holdout") or {}).get("present") else None),
         "judge": [{"taskId": j["taskId"], "verdict": j["verdict"], "model": j.get("model")} for j in v["judge"]],
         "verdict": v["verdict"], "reasons": v["reasons"], "at": v["at"],
         "provenAt": v["at"] if v["verdict"] == "SHIP" else None,

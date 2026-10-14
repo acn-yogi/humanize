@@ -2,12 +2,16 @@
 # case-run.sh: run one trajectory case k times and score every trial from facts. The reproduce
 # step (--pack current) and the prove step (--pack candidate) of the proving loop.
 #
-#   harness/bin/case-run.sh harness/cases/<case>.json --pack current|candidate [--k 3] [--base BRANCH]
-#                           [--out DIR] [--max-usd 3.5]
+#   harness/bin/case-run.sh harness/cases/<case>.json --pack current|candidate|control [--k 3] [--base BRANCH]
+#                           [--out DIR] [--max-usd 3.5] [--holdout]
 #
 # Each trial is a fresh workbench (workbench.sh --no-publish --trial N --retries 0): the spec
 # the case names, run from the base branch's harness (current: [github] base; candidate: the
-# case's fixBranch, or --base). A trial passes when, in its packet, the trusted checks passed on
+# case's fixBranch, or --base; control: the current pack a second time, same k, so the verdict
+# carries a noise floor, the spread between the two current-pack runs, and proof.py refuses a
+# delta inside it as too-small-to-see). --holdout also runs, on the same pack and k, every case
+# the case's "holdout" list names: cases the improver never reads, whose delta proof.py reports
+# apart. A trial passes when, in its packet, the trusted checks passed on
 # a non-empty in-scope change, the reviewer approved at round 0, and ruff check --no-fix (the
 # pre-commit pinned version) passes on the result's changed Python files. Nothing is read from
 # Claude's account of its work. Writes <out>/trials.jsonl, trials.txt and summary.json under
@@ -16,7 +20,7 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck source=../lib/common.sh
 . "${REPO}/harness/lib/common.sh"
-case_file="" pack="" k="" base="" out="" max_usd="3.5" rescore=0
+case_file="" pack="" k="" base="" out="" max_usd="3.5" rescore=0 holdout=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --pack) pack="${2:?}"; shift 2 ;;
@@ -25,19 +29,31 @@ while [ $# -gt 0 ]; do
     --out) out="${2:?}"; shift 2 ;;
     --max-usd) max_usd="${2:?}"; shift 2 ;;
     --rescore) rescore=1; shift ;;   # score the trials already on record again from their packets; run nothing
+    --holdout) holdout=1; shift ;;   # also run the case's held-out cases on this pack
     -*) die "unknown option: $1" ;;
     *) case_file="$1"; shift ;;
   esac
 done
-[ -n "$case_file" ] && [ -f "$case_file" ] || die "usage: case-run.sh harness/cases/<case>.json --pack current|candidate [--k 3] [--base BRANCH]"
-[ "$pack" = current ] || [ "$pack" = candidate ] || die "--pack must be current or candidate"
+[ -n "$case_file" ] && [ -f "$case_file" ] || die "usage: case-run.sh harness/cases/<case>.json --pack current|candidate|control [--k 3] [--base BRANCH] [--holdout]"
+[ "$pack" = current ] || [ "$pack" = candidate ] || [ "$pack" = control ] || die "--pack must be current, candidate or control"
 cj() { jq -r "$1" "$case_file"; }
 [ "$(cj .kind)" = trajectory ] || die "$(cj .id) is a $(cj .kind) case; case-run.sh runs trajectory cases (cases.sh runs the flags cases)"
 spec="$(cj .spec)"; cid="$(cj .id)"
 [ -n "$k" ] || k="$(cj '.k // 3')"
 [[ "$k" =~ ^([1-9]|10)$ ]] || die "--k must be 1 to 10"
+if [ "$holdout" = 1 ]; then
+  # The held-out cases: the same pack and k, each under its own runs/proofs/<id>/<pack>/.
+  # The improver never reads them; proof.py reports their delta apart from the training case's.
+  held="$(cj '(.holdout // []) | .[]')"
+  [ -n "$held" ] || log "case ${cid} names no holdout: suite too small to split (nothing held out to run)"
+  for h in $held; do
+    hf="${REPO}/harness/cases/${h}.json"; [ -f "$hf" ] || die "held-out case ${h} not found (harness/cases/${h}.json)"
+    log "holdout: case ${h} on pack ${pack}, k ${k}"
+    "${REPO}/harness/bin/case-run.sh" "$hf" --pack "$pack" --k "$k" --max-usd "$max_usd" ${base:+--base "$base"} $( [ "$rescore" = 1 ] && echo --rescore )
+  done
+fi
 if [ -z "$base" ]; then
-  if [ "$pack" = current ]; then
+  if [ "$pack" = current ] || [ "$pack" = control ]; then
     base="$(python3 -c 'import tomllib,sys;print(tomllib.load(open(sys.argv[1],"rb"))["github"]["base"])' "${REPO}/harness/config.toml")"
   else
     base="$(cj '.fixBranch // empty')"; [ -n "$base" ] || die "the case names no fixBranch; pass --base"
