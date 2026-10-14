@@ -114,6 +114,29 @@ class CheckTests(unittest.TestCase):
         h = next(h for h in self.by_code["MODEL_MISMATCH"]["items"] if h["taskId"] == "t-FIXTUREMODEL")
         self.assertEqual(h["text"], "author: configured sonnet, served claude-haiku-5")
 
+    def test_spec_contradiction_from_the_authors_text_and_from_a_check_outside_the_scope(self):
+        self.assertIn("t-FIXTURECONTRA", self.tasks("SPEC_CONTRADICTION"))
+        self.assertEqual(self.by_code["SPEC_CONTRADICTION"]["severity"], "FAIL")
+        items = [h for h in self.by_code["SPEC_CONTRADICTION"]["items"] if h["taskId"] == "t-FIXTURECONTRA"]
+        self.assertTrue(any(h["text"].startswith("author:") and "contradict" in h["text"] for h in items))
+        self.assertTrue(any("docs/time.md" in h["text"] and "exclude" in h["text"] for h in items))
+        self.assertNotIn("t-FIXTURECONTRA", self.tasks("SCOPE_BLOCKS_FIX"))
+
+    def test_scope_blocks_fix_from_a_denial_on_the_test_file_of_a_changed_module(self):
+        self.assertIn("t-FIXTURESCOPE", self.tasks("SCOPE_BLOCKS_FIX"))
+        self.assertEqual(self.by_code["SCOPE_BLOCKS_FIX"]["severity"], "FAIL")
+        h = next(h for h in self.by_code["SCOPE_BLOCKS_FIX"]["items"] if h["taskId"] == "t-FIXTURESCOPE")
+        self.assertEqual(h["line"], 2)
+        self.assertIn("tests/test_number.py", h["text"])
+        self.assertIn("test file of a changed module", h["text"])
+        self.assertNotIn("t-FIXTURESCOPE", self.tasks("SPEC_CONTRADICTION"))
+
+    def test_the_recordings_carry_no_structural_stall(self):
+        report = audit.audit([ROOT / "demo/recordings"], ROOT)
+        codes = {c["code"] for c in report["classes"]}
+        self.assertNotIn("SPEC_CONTRADICTION", codes)
+        self.assertNotIn("SCOPE_BLOCKS_FIX", codes)
+
     def test_the_recordings_served_the_configured_models(self):
         report = audit.audit([ROOT / "demo/recordings"], ROOT)
         self.assertNotIn("MODEL_MISMATCH", {c["code"] for c in report["classes"]})

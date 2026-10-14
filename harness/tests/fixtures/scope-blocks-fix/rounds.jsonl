@@ -1,0 +1,1 @@
+{"round":0,"allChecksPass":false,"changedPaths":["src/humanize/number.py"],"verdict":null,"path":"reject","reasons":["checks failed: python -m pytest -q -p no:cacheprovider -x"]}

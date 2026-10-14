@@ -1,0 +1,1 @@
+{"round":0,"allChecksPass":false,"changedPaths":["src/humanize/time.py"],"verdict":null,"path":"reject","reasons":["checks failed: python {harness}/checks/naturalday_weekday_past.py"]}

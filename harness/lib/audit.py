@@ -22,6 +22,10 @@ Checks (one code each; a hit carries taskId, spec, class, file, line, round, tur
     STOP_HOOK_BLOCKED        the Stop hook bounced a finish (loop 2 working; a warning)
     LINT_FAILED              lint among the reviewer's reasons or in the check output
     MODEL_MISMATCH           the served model in the fingerprint is not the configured one (a warning)
+    SPEC_CONTRADICTION       the author's or the reviewer's text names a contradiction between spec
+                             sections, or an acceptance check names a path the scope globs exclude
+    SCOPE_BLOCKS_FIX         the scope hook denied a path the acceptance checks name, or an importer
+                             of a module the change touches (the scope cut the fix off from its callers)
 
 Output: failure classes ranked by recurrence (distinct tasks, then hits), the hits under each.
 Exit 1 when any FAIL-severity class has a hit, 0 on WARN or clean. --promote CODE writes a
@@ -44,6 +48,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fingerprint  # noqa: E402
+import plan as planlib  # noqa: E402
+import stall  # noqa: E402
 
 TRACE_VERSION = 1
 
@@ -57,6 +63,8 @@ SEVERITY = {
     "IGNORED_ERROR": "FAIL",
     "UNSOURCED_SPECIFIC": "FAIL",
     "NO_TOOL_CALL": "FAIL",
+    "SPEC_CONTRADICTION": "FAIL",
+    "SCOPE_BLOCKS_FIX": "FAIL",
     "STOP_HOOK_BLOCKED": "WARN",
     "SESSION_ERROR": "WARN",
     "MODEL_MISMATCH": "WARN",
@@ -71,6 +79,8 @@ DESCRIPTION = {
     "UNSOURCED_SPECIFIC": "the final message says a check or test passed with no tool call that ran one",
     "NO_TOOL_CALL": "a worker session that called no tool, or never ran a check",
     "STOP_HOOK_BLOCKED": "the Stop hook bounced a finish (loop 2 doing its job)",
+    "SPEC_CONTRADICTION": "the spec contradicts itself: named by the author or the reviewer, or an acceptance check names a path outside the scope globs (a structural stall)",
+    "SCOPE_BLOCKS_FIX": "the scope hook denied a path the fix needs: one the acceptance checks name, or an importer of a changed module (a structural stall)",
 }
 CODES = list(SEVERITY)
 
@@ -403,7 +413,66 @@ def check_task(t: TaskRecord, cwd: Path) -> list[Hit]:
         head = block.split("\n", 1)[0]
         if LINT_RE.search(head) and re.search(r"Found \d+ error|error:|\bE\d{3}\b|\bF\d{3}\b|\bW\d{3}\b", block):
             hit("LINT_FAILED", t.dir / "checks.log", None, None, None, f"check output: {head[:120]}")
+    hits.extend(structural_hits(t, cwd))
     return hits
+
+
+def structural_hits(t: TaskRecord, cwd: Path) -> list[Hit]:
+    """The two classes that name a structural stall: SPEC_CONTRADICTION and SCOPE_BLOCKS_FIX."""
+    hits: list[Hit] = []
+
+    def hit(code: str, file: Path | str, line: int | None, rnd: int | None, turn: int | None, text: str) -> None:
+        hits.append(Hit(code, t.task_id, t.spec, t.cls, rel(file, cwd), line, rnd, turn, text[:500]))
+
+    # 1. The author or the reviewer names a contradiction between spec sections.
+    for role, traces in (("author", t.worker), ("reviewer", t.reviewer)):
+        for rnd, tr in enumerate(traces):
+            texts = [tr.final_text] + tr.texts
+            for text in texts:
+                m = stall.CONTRADICTION_RE.search(text)
+                if m:
+                    start = max(0, m.start() - 80)
+                    hit("SPEC_CONTRADICTION", tr.file, tr.final_line, rnd, tr.turns, f"{role}: {text[start:m.end() + 80].strip()!r}")
+                    break
+    # 2. An acceptance check names a path the scope globs exclude: it can only pass by changing a
+    #    file the scope hook refuses, so it cannot pass at all.
+    scope = list((t.packet.get("spec") or {}).get("scope") or [])
+    checks = [str(c.get("cmd")) for c in (t.packet.get("checks") or [])] + list(((t.packet.get("grading") or {}).get("checks") or []) and [str(c.get("cmd")) for c in t.packet["grading"]["checks"]])
+    needed = stall.check_paths({"checks": {"acceptance": checks}})
+    if scope:
+        blocked = [p for p in needed if planlib.matches(p, planlib.HARNESS_PATHS) or not planlib.matches(p, scope)]
+        for p in blocked:
+            hit("SPEC_CONTRADICTION", t.dir / "packet.json", None, None, None,
+                f"acceptance check names {p}, which the scope globs ({', '.join(scope)}) exclude: the check cannot pass inside the scope")
+    # 3. The scope hook denied a path the fix needs: one the checks name, or an importer of a changed module.
+    changed = [str(p) for p in t.packet.get("changedPaths") or []]
+    stems = {Path(p).stem for p in changed if p.endswith(".py") and Path(p).stem != "__init__"}
+    rnd = 0
+    for n, ev in t.loops:
+        if ev.get("loop") == "retry":
+            rnd = int(ev.get("round", rnd + 1))
+        if ev.get("loop") != "scope" or ev.get("decision") != "deny":
+            continue
+        path = str(ev.get("path") or "")
+        why = None
+        if path in needed:
+            why = "named by an acceptance check"
+        elif any(path.endswith(f"test_{s}.py") for s in stems):
+            why = "the test file of a changed module"
+        elif stems and imports_any(cwd / path, stems):
+            why = f"imports a changed module ({', '.join(sorted(s for s in stems if imports_any(cwd / path, {s})))})"
+        if why:
+            hit("SCOPE_BLOCKS_FIX", t.dir / "loops.jsonl", n, rnd, None, f"{ev.get('tool', '?')} on {path} denied: {why}")
+    return hits
+
+
+def imports_any(file: Path, stems: set[str]) -> bool:
+    """Whether a file in the repository imports one of the module stems (a cheap importer read)."""
+    try:
+        text = file.read_text(encoding="utf-8", errors="replace") if file.is_file() else ""
+    except OSError:
+        return False
+    return any(re.search(rf"^\s*(from\s+[\w.]*\b{re.escape(s)}\b[\w.]*\s+import|import\s+[\w.]*\b{re.escape(s)}\b)", text, re.M) for s in stems)
 
 
 # ---- ranking and output -----------------------------------------------------------------------

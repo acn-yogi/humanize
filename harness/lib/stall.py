@@ -44,10 +44,17 @@ STALLS = ("artifact-gap", "grader-disagreement", "harness-or-infra", "structural
 TIMEOUT_EXITS = {124, 137}
 CAP_SUBTYPES = {"error_max_turns", "error_max_budget_usd"}
 REFUSAL_RE = re.compile(r"\b(I (can(?:no|')t|won't|will not|am not able to|'m not able to|must decline|decline to)|not something I can|I(?:'m| am) unable to)\b", re.I)
+# A contradiction inside the spec, between its own parts. "The change contradicts the spec" is a
+# reviewer's finding about the change, not this; the patterns need two spec parts, or the spec
+# against itself.
 CONTRADICTION_RE = re.compile(
-    r"\b(contradict(?:s|ion|ory)?|mutually exclusive|cannot (?:both|satisfy both|be met together)|can't (?:both|satisfy both)|"
-    r"(?:conflict(?:s|ing)?) (?:with|between) (?:the )?(?:spec|constraint|acceptance|criterion|requirement)|"
-    r"(?:the )?spec (?:asks|requires|wants) .{0,80}\b(?:but|and) (?:also|at the same time) .{0,80}\b(?:not|never|forbids|out of scope))", re.I)
+    r"(?:\b(?:spec|criteria|criterion|constraints?|sections?|requirements?)\b[^.\n]{0,80}\bcontradicts? (?:each other|one another|itself)\b"
+    r"|\bcontradict(?:ion|ory)\b [^.\n]{0,20}\b(?:in|within|between|inside) (?:the |its |two )?(?:own )?(?:spec|criteria|constraints?|sections?|requirements?)\b"
+    r"|\bspec (?:contradicts itself|is self-contradictory|is inconsistent with itself)\b"
+    r"|\bmutually exclusive\b"
+    r"|\b(?:cannot|can't|can not) (?:both|satisfy both|meet both|be met together)\b"
+    r"|\bno (?:change|implementation|code) [^.\n]{0,40}\bsatisf(?:y|ies) both\b"
+    r"|\bconflict(?:s|ing)? between (?:the |two )?(?:spec|constraints?|criteria|requirements?|sections?)\b)", re.I)
 ARTIFACT_RE = re.compile(
     r"\b(No such file|not found|No module named|ModuleNotFoundError|ImportError|not installed|command not found|"
     r"missing (?:fixture|file|dependency|credential|module|package|data)|permission denied|could not find|does not exist|"

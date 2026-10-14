@@ -1,9 +1,42 @@
-audit: 3 task(s) under runs, demo/recordings; 12 session(s) normalized (trace v1), 44 tool call(s), 111 pack evidence line(s)
+audit: 12 task(s) under runs, demo/recordings; 28 session(s) normalized (trace v1), 124 tool call(s), 418 pack evidence line(s)
+  note: runs/proofs/lint-on-result/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P: same task as runs/proofs/lint-in-quick-checks/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P; counted once
+  note: runs/proofs/lint-on-result/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT: same task as runs/proofs/lint-in-quick-checks/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT; counted once
+  note: runs/proofs/lint-on-result/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ; counted once
+  note: runs/proofs/lint-on-result/current/t-01M4TWWB3XYF0CN8WP2XG415N8: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TWWB3XYF0CN8WP2XG415N8; counted once
+  note: runs/proofs/lint-on-result/current/t-01M4TX1VSDZ124T2S257MSZHFV: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TX1VSDZ124T2S257MSZHFV; counted once
+  note: runs/proofs/lint-on-result/current/t-01M4TXWYJ0A4BW2FT9P7RMWEPV: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TXWYJ0A4BW2FT9P7RMWEPV; counted once
+  note: runs/proofs/lint-on-result/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A; counted once
+  note: runs/proofs/lint-on-result/current/t-01M4TYNPR2GV0GC731SE2QFQ78: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TYNPR2GV0GC731SE2QFQ78; counted once
+  note: demo/recordings/proof/lint-in-quick-checks/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P: same task as runs/proofs/lint-in-quick-checks/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P; counted once
+  note: demo/recordings/proof/lint-in-quick-checks/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT: same task as runs/proofs/lint-in-quick-checks/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT; counted once
+  note: demo/recordings/proof/lint-in-quick-checks/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ; counted once
+  note: demo/recordings/proof/lint-in-quick-checks/current/t-01M4TWWB3XYF0CN8WP2XG415N8: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TWWB3XYF0CN8WP2XG415N8; counted once
+  note: demo/recordings/proof/lint-in-quick-checks/current/t-01M4TX1VSDZ124T2S257MSZHFV: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TX1VSDZ124T2S257MSZHFV; counted once
+  note: demo/recordings/proof/lint-in-quick-checks/current/t-01M4TXWYJ0A4BW2FT9P7RMWEPV: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TXWYJ0A4BW2FT9P7RMWEPV; counted once
+  note: demo/recordings/proof/lint-in-quick-checks/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A; counted once
+  note: demo/recordings/proof/lint-in-quick-checks/current/t-01M4TYNPR2GV0GC731SE2QFQ78: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TYNPR2GV0GC731SE2QFQ78; counted once
+  note: demo/recordings/proof/lint-on-result/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P: same task as runs/proofs/lint-in-quick-checks/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P; counted once
+  note: demo/recordings/proof/lint-on-result/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT: same task as runs/proofs/lint-in-quick-checks/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT; counted once
+  note: demo/recordings/proof/lint-on-result/candidate/t-01M4V20E6J98PKX19765RV6E5G: same task as runs/proofs/lint-on-result/candidate/t-01M4V20E6J98PKX19765RV6E5G; counted once
+  note: demo/recordings/proof/lint-on-result/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ; counted once
+  note: demo/recordings/proof/lint-on-result/current/t-01M4TWWB3XYF0CN8WP2XG415N8: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TWWB3XYF0CN8WP2XG415N8; counted once
+  note: demo/recordings/proof/lint-on-result/current/t-01M4TX1VSDZ124T2S257MSZHFV: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TX1VSDZ124T2S257MSZHFV; counted once
+  note: demo/recordings/proof/lint-on-result/current/t-01M4TXWYJ0A4BW2FT9P7RMWEPV: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TXWYJ0A4BW2FT9P7RMWEPV; counted once
+  note: demo/recordings/proof/lint-on-result/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A; counted once
+  note: demo/recordings/proof/lint-on-result/current/t-01M4TYNPR2GV0GC731SE2QFQ78: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TYNPR2GV0GC731SE2QFQ78; counted once
   note: demo/recordings/t-01M4RYVYEG6H31MRD8C2N01K04: same task as runs/t-01M4RYVYEG6H31MRD8C2N01K04; counted once
   note: demo/recordings/t-01M4RZHVFWTPBC0BG9QVPBAS3T: same task as runs/t-01M4RZHVFWTPBC0BG9QVPBAS3T; counted once
   note: demo/recordings/t-01M4RZHVGFWY1FXM7RNXWAVNQA: same task as runs/t-01M4RZHVGFWY1FXM7RNXWAVNQA; counted once
 
-FAIL  REVIEW_REJECTED           3 task(s), 5 hit(s)   the adversarial reviewer rejected a round
+FAIL  REVIEW_REJECTED           7 task(s), 9 hit(s)   the adversarial reviewer rejected a round
+      t-01M4TZ5F1GKE6SRTHPBY5DF95P  0002-bugfix-precisedelta-sign (bugfix) round 0  runs/proofs/lint-in-quick-checks/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P/rounds.jsonl:1
+        Docstring edit leaves the previous fenced code block unclosed, so the new prose and the stray pycon fence render inside the 0-minutes example in the mkdocs docs; Zero detection scans rendered (possibly translated) text for digits 1-9 instead of using the computed delta, which is fragile
+      t-01M4TZJDRA1FCY5TR4TSWRQ6BT  0002-bugfix-precisedelta-sign (bugfix) round 0  runs/proofs/lint-in-quick-checks/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT/rounds.jsonl:1
+        Regression: precisedelta(datetime) now raises TypeError (worked on base, returned '1 hour'); Sub-unit negative values render as signed zero, e.g. '-0 seconds' / '-0 minutes'; Tests lack datetime and round-to-zero negative cases, so the regression went unnoticed; Sign check is fragile and redundant with _date_and_delta; uses a redundant local import
+      t-01M4TW8TYH7AES6AB31KYJ3GMQ  0002-bugfix-precisedelta-sign (bugfix) round 0  runs/proofs/lint-in-quick-checks/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ/rounds.jsonl:1
+        the reviewer gave no parsable verdict
+      t-01M4TY8K7YH6A2DE6R8ZGDXG1A  0002-bugfix-precisedelta-sign (bugfix) round 0  runs/proofs/lint-in-quick-checks/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A/rounds.jsonl:1
+        Regression: precisedelta(datetime) now raises TypeError (value < 0 on a datetime); on base it returned '1 hour'; Zero is detected by scanning the translated output for digits instead of using the computed values; test_precisedelta_zero_has_no_sign has an assert that ignores its parameter, so zero coverage is weaker than it looks; No test covers the datetime input path the change broke
       t-01M4RYVYEG6H31MRD8C2N01K04  0001-docs-local-testing (docs) round 0  runs/t-01M4RYVYEG6H31MRD8C2N01K04/rounds.jsonl:1
         The -k example selects all 76 tests in tests/test_filesize.py (same as running the file), so it does not show focusing a test run as the spec intends; The translation-binaries script has to run from the repo root and needs msgfmt on PATH; the page doesn't say so; The skip explanation leaves out the other skip reason in test_i18n.py
       t-01M4RZHVFWTPBC0BG9QVPBAS3T  0004-cli-entrypoint (packaging) round 0  runs/t-01M4RZHVFWTPBC0BG9QVPBAS3T/rounds.jsonl:1
@@ -15,8 +48,16 @@ FAIL  REVIEW_REJECTED           3 task(s), 5 hit(s)   the adversarial reviewer r
       t-01M4RZHVGFWY1FXM7RNXWAVNQA  0002-bugfix-precisedelta-sign (bugfix) round 1  runs/t-01M4RZHVGFWY1FXM7RNXWAVNQA/rounds.jsonl:2
         New test lines exceed 88 chars (tests/test_time.py:846-848, 862, 875); E501 is enabled via ruff 'E' and black would reformat, so pre-commit fails; precisedelta(timedelta(microseconds=-1)) returns '-0 seconds', a rendered zero with a sign, untested against the 'zero never gains a sign' constraint; Sign derived from clock comparison (date > now) plus a dead datetime guard instead of checking the input's sign directly; Two commits with the same message, the second partly undoing the first; should b
 
+WARN  SESSION_ERROR             3 task(s), 3 hit(s)   the session ended on an API or network error (an error of the environment, not of the trajectory; the other checks skip it)
+      t-01M4TW8TYH7AES6AB31KYJ3GMQ  0002-bugfix-precisedelta-sign (bugfix) round 0 turn 8  runs/proofs/lint-in-quick-checks/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ/review-transcript.jsonl:28
+        reviewer: API Error: Unable to connect to API: Self-signed certificate detected (SELF_SIGNED_CERT_IN_CHAIN). The certificate comes from an authority Claude Code doesn't t
+      t-01M4TWWB3XYF0CN8WP2XG415N8  0002-bugfix-precisedelta-sign (bugfix) round 0 turn 1  runs/proofs/lint-in-quick-checks/current/t-01M4TWWB3XYF0CN8WP2XG415N8/transcript.jsonl:3
+        worker: API Error: Unable to connect to API: Self-signed certificate detected (SELF_SIGNED_CERT_IN_CHAIN). The certificate comes from an authority Claude Code doesn't t
+      t-01M4TX1VSDZ124T2S257MSZHFV  0002-bugfix-precisedelta-sign (bugfix) round 0 turn 1  runs/proofs/lint-in-quick-checks/current/t-01M4TX1VSDZ124T2S257MSZHFV/transcript.jsonl:3
+        worker: API Error: Unable to connect to API: Self-signed certificate detected (SELF_SIGNED_CERT_IN_CHAIN). The certificate comes from an authority Claude Code doesn't t
+
 FAIL  LINT_FAILED               1 task(s), 1 hit(s)   lint findings in the reviewer's reasons or the check output
       t-01M4RZHVGFWY1FXM7RNXWAVNQA  0002-bugfix-precisedelta-sign (bugfix) round 1  runs/t-01M4RZHVGFWY1FXM7RNXWAVNQA/rounds.jsonl:2
         New test lines exceed 88 chars (tests/test_time.py:846-848, 862, 875); E501 is enabled via ruff 'E' and black would reformat, so pre-commit fails
 
-result: FAIL (6 FAIL hit(s), 0 WARN hit(s))
+result: FAIL (10 FAIL hit(s), 3 WARN hit(s))

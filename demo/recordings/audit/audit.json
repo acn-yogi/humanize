@@ -6,18 +6,124 @@
    "runs",
    "demo/recordings"
   ],
-  "tasks": 3,
-  "sessions": 12,
-  "toolCalls": 44,
-  "evidenceLines": 111,
-  "costUsd": 2.123
+  "tasks": 12,
+  "sessions": 28,
+  "toolCalls": 124,
+  "evidenceLines": 418,
+  "costUsd": 4.6389
  },
  "notes": [
+  "runs/proofs/lint-on-result/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P: same task as runs/proofs/lint-in-quick-checks/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P; counted once",
+  "runs/proofs/lint-on-result/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT: same task as runs/proofs/lint-in-quick-checks/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT; counted once",
+  "runs/proofs/lint-on-result/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ; counted once",
+  "runs/proofs/lint-on-result/current/t-01M4TWWB3XYF0CN8WP2XG415N8: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TWWB3XYF0CN8WP2XG415N8; counted once",
+  "runs/proofs/lint-on-result/current/t-01M4TX1VSDZ124T2S257MSZHFV: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TX1VSDZ124T2S257MSZHFV; counted once",
+  "runs/proofs/lint-on-result/current/t-01M4TXWYJ0A4BW2FT9P7RMWEPV: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TXWYJ0A4BW2FT9P7RMWEPV; counted once",
+  "runs/proofs/lint-on-result/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A; counted once",
+  "runs/proofs/lint-on-result/current/t-01M4TYNPR2GV0GC731SE2QFQ78: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TYNPR2GV0GC731SE2QFQ78; counted once",
+  "demo/recordings/proof/lint-in-quick-checks/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P: same task as runs/proofs/lint-in-quick-checks/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P; counted once",
+  "demo/recordings/proof/lint-in-quick-checks/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT: same task as runs/proofs/lint-in-quick-checks/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT; counted once",
+  "demo/recordings/proof/lint-in-quick-checks/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ; counted once",
+  "demo/recordings/proof/lint-in-quick-checks/current/t-01M4TWWB3XYF0CN8WP2XG415N8: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TWWB3XYF0CN8WP2XG415N8; counted once",
+  "demo/recordings/proof/lint-in-quick-checks/current/t-01M4TX1VSDZ124T2S257MSZHFV: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TX1VSDZ124T2S257MSZHFV; counted once",
+  "demo/recordings/proof/lint-in-quick-checks/current/t-01M4TXWYJ0A4BW2FT9P7RMWEPV: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TXWYJ0A4BW2FT9P7RMWEPV; counted once",
+  "demo/recordings/proof/lint-in-quick-checks/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A; counted once",
+  "demo/recordings/proof/lint-in-quick-checks/current/t-01M4TYNPR2GV0GC731SE2QFQ78: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TYNPR2GV0GC731SE2QFQ78; counted once",
+  "demo/recordings/proof/lint-on-result/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P: same task as runs/proofs/lint-in-quick-checks/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P; counted once",
+  "demo/recordings/proof/lint-on-result/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT: same task as runs/proofs/lint-in-quick-checks/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT; counted once",
+  "demo/recordings/proof/lint-on-result/candidate/t-01M4V20E6J98PKX19765RV6E5G: same task as runs/proofs/lint-on-result/candidate/t-01M4V20E6J98PKX19765RV6E5G; counted once",
+  "demo/recordings/proof/lint-on-result/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ; counted once",
+  "demo/recordings/proof/lint-on-result/current/t-01M4TWWB3XYF0CN8WP2XG415N8: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TWWB3XYF0CN8WP2XG415N8; counted once",
+  "demo/recordings/proof/lint-on-result/current/t-01M4TX1VSDZ124T2S257MSZHFV: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TX1VSDZ124T2S257MSZHFV; counted once",
+  "demo/recordings/proof/lint-on-result/current/t-01M4TXWYJ0A4BW2FT9P7RMWEPV: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TXWYJ0A4BW2FT9P7RMWEPV; counted once",
+  "demo/recordings/proof/lint-on-result/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A; counted once",
+  "demo/recordings/proof/lint-on-result/current/t-01M4TYNPR2GV0GC731SE2QFQ78: same task as runs/proofs/lint-in-quick-checks/current/t-01M4TYNPR2GV0GC731SE2QFQ78; counted once",
   "demo/recordings/t-01M4RYVYEG6H31MRD8C2N01K04: same task as runs/t-01M4RYVYEG6H31MRD8C2N01K04; counted once",
   "demo/recordings/t-01M4RZHVFWTPBC0BG9QVPBAS3T: same task as runs/t-01M4RZHVFWTPBC0BG9QVPBAS3T; counted once",
   "demo/recordings/t-01M4RZHVGFWY1FXM7RNXWAVNQA: same task as runs/t-01M4RZHVGFWY1FXM7RNXWAVNQA; counted once"
  ],
  "tasks": [
+  {
+   "taskId": "t-01M4TZ5F1GKE6SRTHPBY5DF95P",
+   "spec": "0002-bugfix-precisedelta-sign",
+   "class": "bugfix",
+   "dir": "runs/proofs/lint-in-quick-checks/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P",
+   "baseCommit": "168c9deea626bba79aba4e06dddd3763234644e6",
+   "costUsd": 0.36177750000000003,
+   "pr": ""
+  },
+  {
+   "taskId": "t-01M4TZJDRA1FCY5TR4TSWRQ6BT",
+   "spec": "0002-bugfix-precisedelta-sign",
+   "class": "bugfix",
+   "dir": "runs/proofs/lint-in-quick-checks/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT",
+   "baseCommit": "168c9deea626bba79aba4e06dddd3763234644e6",
+   "costUsd": 0.3338192,
+   "pr": ""
+  },
+  {
+   "taskId": "t-01M4TW8TYH7AES6AB31KYJ3GMQ",
+   "spec": "0002-bugfix-precisedelta-sign",
+   "class": "bugfix",
+   "dir": "runs/proofs/lint-in-quick-checks/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ",
+   "baseCommit": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+   "costUsd": 0.42698179999999997,
+   "pr": ""
+  },
+  {
+   "taskId": "t-01M4TWWB3XYF0CN8WP2XG415N8",
+   "spec": "0002-bugfix-precisedelta-sign",
+   "class": "bugfix",
+   "dir": "runs/proofs/lint-in-quick-checks/current/t-01M4TWWB3XYF0CN8WP2XG415N8",
+   "baseCommit": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+   "costUsd": 0,
+   "pr": ""
+  },
+  {
+   "taskId": "t-01M4TX1VSDZ124T2S257MSZHFV",
+   "spec": "0002-bugfix-precisedelta-sign",
+   "class": "bugfix",
+   "dir": "runs/proofs/lint-in-quick-checks/current/t-01M4TX1VSDZ124T2S257MSZHFV",
+   "baseCommit": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+   "costUsd": 0,
+   "pr": ""
+  },
+  {
+   "taskId": "t-01M4TXWYJ0A4BW2FT9P7RMWEPV",
+   "spec": "0002-bugfix-precisedelta-sign",
+   "class": "bugfix",
+   "dir": "runs/proofs/lint-in-quick-checks/current/t-01M4TXWYJ0A4BW2FT9P7RMWEPV",
+   "baseCommit": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+   "costUsd": 0.3242224,
+   "pr": ""
+  },
+  {
+   "taskId": "t-01M4TY8K7YH6A2DE6R8ZGDXG1A",
+   "spec": "0002-bugfix-precisedelta-sign",
+   "class": "bugfix",
+   "dir": "runs/proofs/lint-in-quick-checks/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A",
+   "baseCommit": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+   "costUsd": 0.3590773,
+   "pr": ""
+  },
+  {
+   "taskId": "t-01M4TYNPR2GV0GC731SE2QFQ78",
+   "spec": "0002-bugfix-precisedelta-sign",
+   "class": "bugfix",
+   "dir": "runs/proofs/lint-in-quick-checks/current/t-01M4TYNPR2GV0GC731SE2QFQ78",
+   "baseCommit": "527b16acd7a185e41a35acb9430e5cb951b069c1",
+   "costUsd": 0.3122783,
+   "pr": ""
+  },
+  {
+   "taskId": "t-01M4V20E6J98PKX19765RV6E5G",
+   "spec": "0002-bugfix-precisedelta-sign",
+   "class": "bugfix",
+   "dir": "runs/proofs/lint-on-result/candidate/t-01M4V20E6J98PKX19765RV6E5G",
+   "baseCommit": "168c9deea626bba79aba4e06dddd3763234644e6",
+   "costUsd": 0.39776789999999995,
+   "pr": ""
+  },
   {
    "taskId": "t-01M4RYVYEG6H31MRD8C2N01K04",
    "spec": "0001-docs-local-testing",
@@ -51,12 +157,16 @@
    "code": "REVIEW_REJECTED",
    "severity": "FAIL",
    "description": "the adversarial reviewer rejected a round",
-   "tasks": 3,
-   "hits": 5,
+   "tasks": 7,
+   "hits": 9,
    "taskIds": [
     "t-01M4RYVYEG6H31MRD8C2N01K04",
     "t-01M4RZHVFWTPBC0BG9QVPBAS3T",
-    "t-01M4RZHVGFWY1FXM7RNXWAVNQA"
+    "t-01M4RZHVGFWY1FXM7RNXWAVNQA",
+    "t-01M4TW8TYH7AES6AB31KYJ3GMQ",
+    "t-01M4TY8K7YH6A2DE6R8ZGDXG1A",
+    "t-01M4TZ5F1GKE6SRTHPBY5DF95P",
+    "t-01M4TZJDRA1FCY5TR4TSWRQ6BT"
    ],
    "specs": [
     "0001-docs-local-testing",
@@ -64,6 +174,50 @@
     "0004-cli-entrypoint"
    ],
    "items": [
+    {
+     "code": "REVIEW_REJECTED",
+     "taskId": "t-01M4TZ5F1GKE6SRTHPBY5DF95P",
+     "spec": "0002-bugfix-precisedelta-sign",
+     "file": "runs/proofs/lint-in-quick-checks/candidate/t-01M4TZ5F1GKE6SRTHPBY5DF95P/rounds.jsonl",
+     "line": 1,
+     "round": 0,
+     "turn": null,
+     "text": "Docstring edit leaves the previous fenced code block unclosed, so the new prose and the stray pycon fence render inside the 0-minutes example in the mkdocs docs; Zero detection scans rendered (possibly translated) text for digits 1-9 instead of using the computed delta, which is fragile",
+     "class": "bugfix"
+    },
+    {
+     "code": "REVIEW_REJECTED",
+     "taskId": "t-01M4TZJDRA1FCY5TR4TSWRQ6BT",
+     "spec": "0002-bugfix-precisedelta-sign",
+     "file": "runs/proofs/lint-in-quick-checks/candidate/t-01M4TZJDRA1FCY5TR4TSWRQ6BT/rounds.jsonl",
+     "line": 1,
+     "round": 0,
+     "turn": null,
+     "text": "Regression: precisedelta(datetime) now raises TypeError (worked on base, returned '1 hour'); Sub-unit negative values render as signed zero, e.g. '-0 seconds' / '-0 minutes'; Tests lack datetime and round-to-zero negative cases, so the regression went unnoticed; Sign check is fragile and redundant with _date_and_delta; uses a redundant local import",
+     "class": "bugfix"
+    },
+    {
+     "code": "REVIEW_REJECTED",
+     "taskId": "t-01M4TW8TYH7AES6AB31KYJ3GMQ",
+     "spec": "0002-bugfix-precisedelta-sign",
+     "file": "runs/proofs/lint-in-quick-checks/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ/rounds.jsonl",
+     "line": 1,
+     "round": 0,
+     "turn": null,
+     "text": "the reviewer gave no parsable verdict",
+     "class": "bugfix"
+    },
+    {
+     "code": "REVIEW_REJECTED",
+     "taskId": "t-01M4TY8K7YH6A2DE6R8ZGDXG1A",
+     "spec": "0002-bugfix-precisedelta-sign",
+     "file": "runs/proofs/lint-in-quick-checks/current/t-01M4TY8K7YH6A2DE6R8ZGDXG1A/rounds.jsonl",
+     "line": 1,
+     "round": 0,
+     "turn": null,
+     "text": "Regression: precisedelta(datetime) now raises TypeError (value < 0 on a datetime); on base it returned '1 hour'; Zero is detected by scanning the translated output for digits instead of using the computed values; test_precisedelta_zero_has_no_sign has an assert that ignores its parameter, so zero coverage is weaker than it looks; No test covers the datetime input path the change broke",
+     "class": "bugfix"
+    },
     {
      "code": "REVIEW_REJECTED",
      "taskId": "t-01M4RYVYEG6H31MRD8C2N01K04",
@@ -122,6 +276,56 @@
    ]
   },
   {
+   "code": "SESSION_ERROR",
+   "severity": "WARN",
+   "description": "the session ended on an API or network error (an error of the environment, not of the trajectory; the other checks skip it)",
+   "tasks": 3,
+   "hits": 3,
+   "taskIds": [
+    "t-01M4TW8TYH7AES6AB31KYJ3GMQ",
+    "t-01M4TWWB3XYF0CN8WP2XG415N8",
+    "t-01M4TX1VSDZ124T2S257MSZHFV"
+   ],
+   "specs": [
+    "0002-bugfix-precisedelta-sign"
+   ],
+   "items": [
+    {
+     "code": "SESSION_ERROR",
+     "taskId": "t-01M4TW8TYH7AES6AB31KYJ3GMQ",
+     "spec": "0002-bugfix-precisedelta-sign",
+     "file": "runs/proofs/lint-in-quick-checks/current/t-01M4TW8TYH7AES6AB31KYJ3GMQ/review-transcript.jsonl",
+     "line": 28,
+     "round": 0,
+     "turn": 8,
+     "text": "reviewer: API Error: Unable to connect to API: Self-signed certificate detected (SELF_SIGNED_CERT_IN_CHAIN). The certificate comes from an authority Claude Code doesn't t",
+     "class": "bugfix"
+    },
+    {
+     "code": "SESSION_ERROR",
+     "taskId": "t-01M4TWWB3XYF0CN8WP2XG415N8",
+     "spec": "0002-bugfix-precisedelta-sign",
+     "file": "runs/proofs/lint-in-quick-checks/current/t-01M4TWWB3XYF0CN8WP2XG415N8/transcript.jsonl",
+     "line": 3,
+     "round": 0,
+     "turn": 1,
+     "text": "worker: API Error: Unable to connect to API: Self-signed certificate detected (SELF_SIGNED_CERT_IN_CHAIN). The certificate comes from an authority Claude Code doesn't t",
+     "class": "bugfix"
+    },
+    {
+     "code": "SESSION_ERROR",
+     "taskId": "t-01M4TX1VSDZ124T2S257MSZHFV",
+     "spec": "0002-bugfix-precisedelta-sign",
+     "file": "runs/proofs/lint-in-quick-checks/current/t-01M4TX1VSDZ124T2S257MSZHFV/transcript.jsonl",
+     "line": 3,
+     "round": 0,
+     "turn": 1,
+     "text": "worker: API Error: Unable to connect to API: Self-signed certificate detected (SELF_SIGNED_CERT_IN_CHAIN). The certificate comes from an authority Claude Code doesn't t",
+     "class": "bugfix"
+    }
+   ]
+  },
+  {
    "code": "LINT_FAILED",
    "severity": "FAIL",
    "description": "lint findings in the reviewer's reasons or the check output",
@@ -148,7 +352,7 @@
    ]
   }
  ],
- "failHits": 6,
- "warnHits": 0,
+ "failHits": 10,
+ "warnHits": 3,
  "result": "FAIL"
 }
