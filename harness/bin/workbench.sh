@@ -123,7 +123,7 @@ cp "${tdir}/settings.json" "${rdir}/settings.json"
 
 { cat <<EOF
 $(pj .body)
-
+$(pj '.classTemplate // ""')
 ## How this workbench works
 
 - This git worktree is yours alone for this task: ${work}

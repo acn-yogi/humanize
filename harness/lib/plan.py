@@ -11,6 +11,11 @@ what machines act on (class, scope, checks, caps); the Markdown body carries wha
 approved (intent, constraints, out of scope, acceptance criteria) and is the prompt Claude
 gets. Caps in a spec may lower the harness ceilings in config.toml, never raise them.
 
+Optional front matter the plan carries through: [checks] must_not_change (the negatives:
+commands that pass on the base and must still pass on the result; intake refuses a spec whose
+negatives already fail) and, for a class with requires_eval in classes.toml (llm-tune), an
+[eval] table with command and holdout, refused when missing.
+
 Every plan carries the harness phase (config.toml [harness] phase, 0 to 3), which the
 dispatcher's forecast, the router and the shaper honour. WORKBENCH_PHASE in the operator's
 environment overrides it for one command; the plan records which source it came from.
@@ -86,6 +91,29 @@ def read_phase(config: dict) -> dict:
     return {"phase": phase, "name": PHASES[phase], "source": source}
 
 
+def read_eval(spec_path: Path, cls: str, class_row: dict, value) -> dict | None:
+    """The [eval] table a class with requires_eval needs: command (how to score) and holdout
+    (the cases the session never reads). Refused when missing or incomplete; null for other classes."""
+    if not class_row.get("requires_eval"):
+        return None if value is None else _eval_table(spec_path, value)
+    if value is None:
+        fail(f"{spec_path}: class {cls} needs an [eval] table with command and holdout "
+             "(the eval that scores the change, and the held-out cases the session never reads)")
+    return _eval_table(spec_path, value)
+
+
+def _eval_table(spec_path: Path, value) -> dict:
+    if not isinstance(value, dict):
+        fail(f"{spec_path}: [eval] must be a table")
+    for key in ("command", "holdout"):
+        if not isinstance(value.get(key), str) or not value[key].strip():
+            fail(f"{spec_path}: [eval] needs a non-empty {key}")
+    training = value.get("training")
+    if training is not None and (not isinstance(training, str) or not training.strip()):
+        fail(f"{spec_path}: [eval] training must be a non-empty string when given")
+    return {"command": value["command"], "holdout": value["holdout"], "training": training}
+
+
 def build_plan(harness: Path, spec_path: Path) -> dict:
     config = tomllib.loads((harness / "config.toml").read_text(encoding="utf-8"))
     classes = tomllib.loads((harness / "classes.toml").read_text(encoding="utf-8"))
@@ -122,6 +150,10 @@ def build_plan(harness: Path, spec_path: Path) -> dict:
     fail_first = str_list(checks.get("fail_first"), "checks.fail_first")
     if class_row.get("fail_first") and not fail_first:
         fail(f"{spec_path}: class {cls} needs checks.fail_first (a check that fails on the base)")
+    # The negatives (optional): checks that pass on the base and must still pass on the result,
+    # for behaviour the suite does not cover. Intake refuses a spec whose negatives already fail.
+    must_not_change = str_list(checks.get("must_not_change"), "checks.must_not_change")
+    eval_row = read_eval(spec_path, cls, class_row, meta.get("eval"))
 
     batch_id = class_row.get("batch")
     batch_row = classes.get("batches", {}).get(batch_id) if batch_id else None
@@ -150,7 +182,12 @@ def build_plan(harness: Path, spec_path: Path) -> dict:
             "acceptance": str_list(config["checks"]["always"], "config checks.always")
             + str_list(checks.get("acceptance"), "checks.acceptance"),
             "failFirst": fail_first,
+            "mustNotChange": must_not_change,
         },
+        # llm-tune only: the eval command and the holdout the session never reads; null elsewhere.
+        "eval": eval_row,
+        # The class's template text, appended to the prompt after the spec body (llm-tune's hillclimb).
+        "classTemplate": str(class_row.get("template") or ""),
         "setup": str_list(config["setup"]["commands"], "config setup.commands"),
         "caps": caps,
         "models": config["models"],

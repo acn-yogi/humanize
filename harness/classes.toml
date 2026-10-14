@@ -27,6 +27,33 @@ description = "A small new option on an existing public function"
 approval = "per_pr"
 graduated = false
 
+[classes.build]
+description = "New behaviour with no release flag: a new command, module or endpoint the rule does not require to ship dark; acceptance checks fail on the base, the negatives hold, the reviewer reads the whole diff"
+approval = "per_pr"
+fail_first = true        # the acceptance checks that name the new behaviour must fail on the base
+flag = "none"            # no release flag: the change is live once merged, so a person reads every PR
+graduated = false
+
+[classes.llm-tune]
+description = "Only where the repository holds an LLM application: a change to a prompt, a tool description, an effort or model setting, scored on a named eval with a holdout"
+approval = "per_pr"
+requires_eval = true     # the spec's front matter must carry [eval] command and holdout, or plan.py refuses it
+graduated = false
+# What the workbench tells the session after the spec body. The acceptance criterion is a
+# number, not a test: the eval's score on the held-out cases must move by more than the noise
+# floor measured by running the current prompt twice.
+template = """
+## Hillclimb inside the session
+
+- Run the eval command on the training set first and write down the score: that is the baseline.
+- One lever per round: one line of the prompt, one tool description, one effort or model setting.
+  Rerun the eval on the training set after each change. Keep the change if the score rose,
+  revert it if not. Stop at the round cap.
+- Never read, open or run the holdout. The final score is taken on the holdout once, by the
+  workbench, after you finish, and goes in the packet beside the training score.
+- Report the baseline, each lever tried with its training score, and what was kept.
+"""
+
 [classes.packaging]
 description = "Anything that changes how the package is built, installed or invoked"
 approval = "per_pr"
