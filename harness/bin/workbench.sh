@@ -166,6 +166,7 @@ run_worker() {  # run_worker <round> [--resume <id>]
   s="$(summary <(jq -c 'select(.type == "result")' "${rdir}/transcript.jsonl" | tail -1))"
   s="$(jq -c --argjson r "$round" --argjson rc "$rc" '. + {round: $r, role: "worker", exit: $rc}' <<< "$s")"
   sessions="$(jq -c --argjson s "$s" '. + [$s]' <<< "$sessions")"
+  printf '%s\n' "$sessions" > "${rdir}/sessions.json"   # stall.py reads the session facts from here
   event "${tdir}/loops.jsonl" --arg loop session --argjson round "$round" --arg subtype "$(jq -r .subtype <<< "$s")" \
     --argjson turns "$(jq '.turns // 0' <<< "$s")" --argjson costUsd "$(jq '.costUsd // 0' <<< "$s")"
   log "session ended: $(jq -r '"\(.subtype), \(.turns) turns, $\(.costUsd)"' <<< "$s")"
@@ -328,7 +329,19 @@ needs_retry() {
   [ "$sub" != error_max_budget_usd ] || return 1
   [ "$p" = reject ] || [ "$v" = reject ]
 }
+halt_reason=""
 while needs_retry && [ "$round" -lt "$(caps retries)" ]; do
+  # Stalls are categorized, not ground down: a structural stall (the spec contradicts itself,
+  # or the scope cuts the change off from the paths it needs) ends the task here, before the
+  # cap, instead of spending the remaining retries on the same spec.
+  stall_now="$(python3 "${T}/harness/lib/stall.py" "$rdir" --retries "$round" --retry-cap "$(caps retries)")"
+  if [ "$(jq -r '.stall // ""' <<< "$stall_now")" = structural ]; then
+    halt_reason="stall-structural"
+    log "stall-structural: $(jq -r .stallEvidence <<< "$stall_now" | cut -c1-300); no retry, the spec goes back to its owner"
+    event "${tdir}/loops.jsonl" --arg loop retry --argjson round "$((round + 1))" --arg event stopped --arg reason stall-structural \
+      --arg evidence "$(jq -r .stallEvidence <<< "$stall_now" | cut -c1-500)"
+    break
+  fi
   round=$((round + 1))
   sid="$(jq -r 'map(select(.role == "worker")) | last | .sessionId // empty' <<< "$sessions")"
   [ -n "$sid" ] || break
@@ -359,12 +372,23 @@ cp "${tdir}/loops.jsonl" "${rdir}/loops.jsonl"
 # model sits beside it; the audit warns (MODEL_MISMATCH) when the two disagree.
 served_author="$(python3 "${T}/harness/lib/fingerprint.py" served "${rdir}/transcript.jsonl")"
 served_reviewer="$(python3 "${T}/harness/lib/fingerprint.py" served "${rdir}/review-transcript.jsonl")"
+# The halt, when there is one: every halted task carries a failure class (harness-error,
+# refusal, timeout, genuine) and, at the retry cap or on a structural stall, a stall category
+# (artifact-gap, grader-disagreement, harness-or-infra, structural, variance), both read from
+# the signals above and never averaged into one failure rate.
+path="$(jq -r .path "${rdir}/decision.json")"
+halt=null
+if [ "$path" = reject ] || [ -n "$halt_reason" ]; then
+  halt="$(python3 "${T}/harness/lib/stall.py" "$rdir" --retries "$round" --retry-cap "$(caps retries)" \
+    | jq -c --arg r "$halt_reason" '. + {reason: (if $r != "" then $r elif .atCap then "retry-cap" else "rejected" end)}')"
+  log "halt: $(jq -r '"\(.reason); failure class \(.failureClass)\(if .stall then ", stall " + .stall else "" end): \(.stallEvidence // .evidence)"' <<< "$halt" | cut -c1-300)"
+fi
 jq -n --arg t "$task_id" --arg trial "$trial" --slurpfile plan "$plan" --slurpfile facts "${rdir}/facts.json" \
   --slurpfile scope "${rdir}/scope.json" --slurpfile decision "${rdir}/decision.json" \
   --argjson verdict "$(cat "${rdir}/verdict.json" 2>/dev/null || echo null)" --argjson sessions "$sessions" \
   --slurpfile loops "${rdir}/loops.jsonl" --arg v "$claude_version" --arg pack "$pack_id" --arg base "$base" \
   --arg s "$started_at" --arg e "$ended_at" --argjson ev "$evidence_lines" \
-  --argjson sa "$served_author" --argjson sr "$served_reviewer" \
+  --argjson sa "$served_author" --argjson sr "$served_reviewer" --argjson halt "$halt" \
   --slurpfile rounds "${rdir}/rounds.jsonl" '
   ($plan[0]) as $p | ($facts[0]) as $f |
   {v: 1, taskId: $t, trial: (if $trial == "" then null else ($trial | tonumber) end),
@@ -376,7 +400,7 @@ jq -n --arg t "$task_id" --arg trial "$trial" --slurpfile plan "$plan" --slurpfi
    startedAt: $s, endedAt: $e, baseBranch: $base, baseCommit: $f.baseSha, headCommit: $f.resultSha,
    changedPaths: $f.changedPaths, linesChanged: $f.linesChanged,
    checks: $f.checks, allChecksPass: $f.allChecksPass, grading: $f.grading, scope: $scope[0],
-   review: $verdict, decision: $decision[0], rounds: $rounds,
+   review: $verdict, decision: $decision[0], rounds: $rounds, halt: $halt,
    loops: {
      sessions: $sessions,
      finish: [$loops[] | select(.loop == "finish")],
@@ -387,13 +411,17 @@ jq -n --arg t "$task_id" --arg trial "$trial" --slurpfile plan "$plan" --slurpfi
    packEvidenceLines: $ev}' > "${rdir}/packet.json"
 python3 "${T}/harness/lib/evidence.py" "$rdir" > "${rdir}/evidence.md"
 
-path="$(jq -r .path "${rdir}/decision.json")"
 pr=""
 if [ "$publish" = 1 ] && [ "$path" != reject ]; then
   pr="$("${REPO}/harness/bin/publish.sh" "$rdir" "$branch")" || log "publish failed: the branch and packet are kept locally"
 fi
+# The ledger row. A halted row (path reject) carries failureClass and, at the cap or on a
+# structural stall, stall; a structural stall also names itself first among the reasons.
 event "${out}/ledger.jsonl" --arg taskId "$task_id" --arg spec "$(pj .id)" --arg class "$(pj .class)" --arg path "$path" \
-  --argjson reasons "$(jq -c .reasons "${rdir}/decision.json")" --argjson costUsd "$(jq .costUsd "${rdir}/packet.json")" \
-  --argjson retries "$(jq .loops.retries "${rdir}/packet.json")" --arg pr "$pr" --arg packId "$pack_id" --arg trial "$trial"   --arg trigger "$(pj '.trigger // ""')"
+  --argjson reasons "$(jq -c --argjson h "$halt" '(if ($h.reason // "") == "stall-structural" then ["stall-structural: " + ($h.stallEvidence // "")] else [] end) + .reasons' "${rdir}/decision.json")" \
+  --argjson costUsd "$(jq .costUsd "${rdir}/packet.json")" \
+  --argjson retries "$(jq .loops.retries "${rdir}/packet.json")" --arg pr "$pr" --arg packId "$pack_id" --arg trial "$trial" --arg trigger "$(pj '.trigger // ""')" \
+  --argjson failureClass "$(jq -c '.failureClass // null' <<< "$halt")" --argjson stall "$(jq -c '.stall // null' <<< "$halt")" \
+  --argjson haltReason "$(jq -c '.reason // null' <<< "$halt")"
 log "done: ${path}$( [ -n "$pr" ] && echo ", ${pr}" ), \$$(jq -r '.costUsd * 100 | round / 100' "${rdir}/packet.json") in total; packet ${rdir}/packet.json"
 echo "task-id: ${task_id}"

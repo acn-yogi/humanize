@@ -11,6 +11,10 @@ One line per signal (and --json for the same as one object):
     cost per merged PR        sum of costUsd of the tasks whose PR merged, over the merged count
     recurrence                a reason code seen in a corrected row after the case for it was
                               marked fixed (harness/cases/*.json with reasonCode and provenAt)
+    halts by failure class    halted rows (path reject) by failureClass: harness-error, refusal,
+                              timeout, genuine; one line, counts apart, never one failure rate
+    stalls by category        halted rows at the retry cap or stopped early, by stall:
+                              artifact-gap, grader-disagreement, harness-or-infra, structural, variance
     pack size                 bytes and files under harness/pack, harness/hooks and the settings template
 
 The PR list comes from gh pr list on the fork (never upstream); --offline reads none and says
@@ -89,6 +93,14 @@ def compute(ledger: list[dict], prs: list[dict] | None, cases: list[dict], pack:
             merged_with_cost += 1
     cost_per_merged = round(merged_cost / len(merged), 4) if merged else None
 
+    # Halts (path reject) by failure class, and stalls by category: separate lines, never one
+    # failure rate. A refusal counted as a failure hides a pack problem behind a capability
+    # number; a serving error counted as a failure lowers a class's pass^k for nothing.
+    halted = [r for r in tasks.values() if r.get("path") == "reject"]
+    by_class = Counter(str(r.get("failureClass") or "unclassified") for r in halted)
+    stalls = Counter(str(r["stall"]) for r in halted if r.get("stall"))
+    structural_early = len([r for r in halted if r.get("haltReason") == "stall-structural"])
+
     recurrences = []
     for c in cases:
         code, fixed_at = c.get("reasonCode"), c.get("provenAt") or c.get("fixedAt")
@@ -105,6 +117,8 @@ def compute(ledger: list[dict], prs: list[dict] | None, cases: list[dict], pack:
         "prsWithNoCorrection": {"count": len(no_correction), "of": len(harness_prs), "numbers": [int(p["number"]) for p in no_correction]} if prs is not None else None,
         "costPerMergedPr": {"usd": cost_per_merged, "merged": len(merged), "mergedWithCost": merged_with_cost, "totalUsd": round(merged_cost, 4)} if prs is not None else None,
         "recurrence": {"count": sum(r["count"] for r in recurrences), "cases": recurrences, "casesWatched": len([c for c in cases if c.get("reasonCode") and (c.get("provenAt") or c.get("fixedAt"))])},
+        "haltsByFailureClass": {"halts": len(halted), "classes": dict(sorted(by_class.items()))},
+        "stallsByCategory": {"stalls": sum(stalls.values()), "categories": dict(sorted(stalls.items())), "stoppedEarly": structural_early},
         "packSize": pack,
         "tasks": len(tasks),
         "corrected": len(corrected),
@@ -134,6 +148,17 @@ def render(s: dict) -> str:
         w("recurrence                n/a (no proven case carries a reason code yet)")
     else:
         w(f"recurrence                {r['count']} over {r['casesWatched']} proven case(s)" + ("".join(f"; {x['reasonCode']} again after {x['case']} ({x['count']})" for x in r["cases"]) if r["cases"] else ""))
+    h = s["haltsByFailureClass"]
+    if h["halts"] == 0:
+        w("halts by failure class    0 halted task(s)")
+    else:
+        w(f"halts by failure class    {h['halts']} halted task(s): " + ", ".join(f"{k} {v}" for k, v in h["classes"].items()) + " (reported apart, never one failure rate)")
+    st = s["stallsByCategory"]
+    if st["stalls"] == 0:
+        w("stalls by category        0 stall(s) (no task at the retry cap or stopped on a structural stall)")
+    else:
+        w(f"stalls by category        {st['stalls']} stall(s): " + ", ".join(f"{k} {v}" for k, v in st["categories"].items())
+          + (f"; {st['stoppedEarly']} stopped before the cap (stall-structural)" if st["stoppedEarly"] else ""))
     p = s["packSize"]
     w(f"pack size                 {p['bytes']} bytes, {p['files']} files ({', '.join(p['paths'])})")
     return "\n".join(out)

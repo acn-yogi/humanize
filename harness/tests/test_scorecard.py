@@ -68,9 +68,35 @@ class ScorecardTests(unittest.TestCase):
 
     def test_render_has_one_line_per_signal(self):
         text = scorecard.render(scorecard.compute(LEDGER, PRS, [], PACK))
-        for head in ("manual takeovers", "human PR comments", "PRs with no correction", "cost per merged PR", "recurrence", "pack size"):
+        for head in ("manual takeovers", "human PR comments", "PRs with no correction", "cost per merged PR", "recurrence",
+                     "halts by failure class", "stalls by category", "pack size"):
             self.assertIn(head, text)
-        self.assertEqual(len(text.splitlines()), 6)
+        self.assertEqual(len(text.splitlines()), 8)
+
+    def test_halts_by_failure_class_and_stalls_by_category_are_separate_lines(self):
+        halted = [
+            {"at": "2026-10-14T01:00:00Z", "taskId": "t-01M4ZZZZZZZZZZZZZZZZZZZZZA", "spec": "0005", "class": "feature", "path": "reject", "costUsd": 0.3,
+             "pr": "", "failureClass": "genuine", "stall": "variance", "haltReason": "retry-cap"},
+            {"at": "2026-10-14T01:10:00Z", "taskId": "t-01M4ZZZZZZZZZZZZZZZZZZZZZB", "spec": "0006", "class": "feature", "path": "reject", "costUsd": 0.1,
+             "pr": "", "failureClass": "harness-error", "stall": "harness-or-infra", "haltReason": "rejected"},
+            {"at": "2026-10-14T01:20:00Z", "taskId": "t-01M4ZZZZZZZZZZZZZZZZZZZZZC", "spec": "0007", "class": "feature", "path": "reject", "costUsd": 0.2,
+             "pr": "", "failureClass": "genuine", "stall": "structural", "haltReason": "stall-structural"},
+            {"at": "2026-10-14T01:30:00Z", "taskId": "t-01M4ZZZZZZZZZZZZZZZZZZZZZD", "spec": "0008", "class": "feature", "path": "reject", "costUsd": 0.2,
+             "pr": "", "failureClass": "refusal", "stall": None, "haltReason": "rejected"},
+            {"at": "2026-10-12T01:30:00Z", "taskId": "t-01M4ZZZZZZZZZZZZZZZZZZZZZE", "spec": "0009", "class": "feature", "path": "reject", "costUsd": 0.2, "pr": ""},
+        ]
+        s = scorecard.compute(LEDGER + halted, PRS, [], PACK)
+        self.assertEqual(s["haltsByFailureClass"], {"halts": 5, "classes": {"genuine": 2, "harness-error": 1, "refusal": 1, "unclassified": 1}})
+        self.assertEqual(s["stallsByCategory"], {"stalls": 3, "categories": {"harness-or-infra": 1, "structural": 1, "variance": 1}, "stoppedEarly": 1})
+        text = scorecard.render(s)
+        self.assertIn("halts by failure class    5 halted task(s): genuine 2, harness-error 1, refusal 1, unclassified 1", text)
+        self.assertIn("stalls by category        3 stall(s): harness-or-infra 1, structural 1, variance 1; 1 stopped before the cap (stall-structural)", text)
+        self.assertNotIn("failure rate", text.split("never one failure rate")[0].split("halts by")[0])
+
+    def test_no_halts_says_zero_on_both_lines(self):
+        text = scorecard.render(scorecard.compute(LEDGER, PRS, [], PACK))
+        self.assertIn("halts by failure class    0 halted task(s)", text)
+        self.assertIn("stalls by category        0 stall(s)", text)
 
     def test_pack_size_counts_files_and_bytes(self):
         with tempfile.TemporaryDirectory() as d:
