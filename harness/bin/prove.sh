@@ -30,7 +30,7 @@ for i in $(seq 1 "$k"); do
   id="$("${REPO}/harness/bin/workbench.sh" "$spec" --no-publish --trial "$i" --out "$out" | sed -n 's/^task-id: //p' | tail -1)"
   [ -n "$id" ] || { trials="$(jq -c --argjson i "$i" '. + [{trial: $i, outcome: "error", reasons: ["the workbench did not start"]}]' <<< "$trials")"; continue; }
   p="${out}/${id}/packet.json"
-  t="$(jq -c --argjson i "$i" '{trial: $i, taskId, packId,
+  t="$(jq -c --argjson i "$i" '{trial: $i, taskId, packId, fingerprint: (.fingerprint // null),
     outcome: (if .allChecksPass and (.changedPaths | length) > 0 and ((.scope.outside + .scope.harness) | length) == 0
                  and (.grading == null or .grading.ok) and (.review.verdict // "none") == "approve" then "pass" else "fail" end),
     path: .decision.path, costUsd}' "$p")"
@@ -43,8 +43,14 @@ verdict="$(jq -n --argjson t "$trials" --arg c "$cls" --arg s "$(basename "$spec
   {class: $c, cases: [$s], k: $k, trials: ($t | length), passes: $passes,
    passK: (if ($t | length) > 0 and $passes == ($t | length) then 1 else 0 end),
    imageId: ($t | map(.packId) | unique | if length == 1 then .[0] else "mixed" end), driver: "guest",
+   # Every trial of one proof must share an environment (Claude Code version, served model);
+   # a proof whose trials ran on two environments is not one measurement.
+   fingerprints: ($t | map(.fingerprint // empty) | unique),
+   comparison: ($t | map(.fingerprint // empty | del(.packId)) | unique
+                | if length == 0 then "fingerprint-not-recorded" elif length == 1 then "valid" else "invalid-fingerprint" end),
    costUsd: ($t | map(.costUsd // 0) | add), at: (now | todate), runs: $t}')"
-echo "$verdict" | tee "${out}/verdict.json" | jq '{class, k, passes, passK, imageId, costUsd}'
+echo "$verdict" | tee "${out}/verdict.json" | jq '{class, k, passes, passK, imageId, comparison, costUsd}'
+[ "$(jq -r .comparison <<< "$verdict")" != invalid-fingerprint ] || log "the trials ran on different environments (fingerprints differ beyond the pack id): the proof is not one measurement"
 if [ "$record" = 1 ]; then
   echo "$verdict" | jq 'del(.runs)' > "${REPO}/harness/proofs/${cls}.json"
   log "wrote harness/proofs/${cls}.json: review it and commit it to graduate the class (people merge proofs, the loop does not)"

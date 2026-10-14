@@ -26,6 +26,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import fingerprint  # noqa: E402
+
 
 def load(p: Path):
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
@@ -38,10 +41,11 @@ def git(root: Path, *args: str) -> str:
 
 def side(summary: dict | None) -> dict:
     if not summary:
-        return {"passK": None, "passes": 0, "trials": 0, "errors": 0, "costUsd": 0.0, "interrupted": [], "interruptedCostUsd": 0.0, "base": None, "baseSha": None, "packIds": [], "runs": []}
+        return {"passK": None, "passes": 0, "trials": 0, "errors": 0, "costUsd": 0.0, "interrupted": [], "interruptedCostUsd": 0.0, "base": None, "baseSha": None, "packIds": [], "fingerprints": [], "runs": []}
     return {"passK": summary.get("passK"), "passes": summary.get("passes", 0), "trials": summary.get("trials", 0),
             "errors": summary.get("errors", 0), "costUsd": round(float(summary.get("costUsd") or 0), 4), "base": summary.get("base"), "baseSha": summary.get("baseSha"),
             "packIds": summary.get("packIds") or [], "k": summary.get("k"),
+            "fingerprints": summary.get("fingerprints") or [],
             "interrupted": summary.get("interrupted") or [], "interruptedCostUsd": round(float(summary.get("interruptedCostUsd") or 0), 4),
             "runs": [{k: r.get(k) for k in ("trial", "taskId", "outcome", "why", "checksPass", "reviewVerdict0", "ruffOk", "ruffFindings", "stopBlocks", "costUsd", "workerTurns")} for r in summary.get("runs") or []]}
 
@@ -91,11 +95,17 @@ def build(root: Path, case_id: str, fix_branch: str | None, cases_output: str | 
         reasons.append("no judge verdict on record")
     elif any(j["verdict"] != "earned" for j in judges):
         reasons.append("judge: " + ", ".join(f"{j['taskId'][-6:]} {j['verdict']}" for j in judges if j["verdict"] != "earned"))
+    # Same fingerprint on both sides, or the comparison is void: the pack id is the thing under
+    # test; the Claude Code version and the served model must match.
+    comparison = fingerprint.compare(before["fingerprints"], after["fingerprints"]) if before["trials"] and after["trials"] else {"comparison": "fingerprint-not-recorded", "differences": []}
+    if comparison["comparison"] == "invalid-fingerprint":
+        reasons.append("invalid-fingerprint: before and after ran on different environments (" + "; ".join(comparison["differences"]) + "); rerun the before side on the current environment")
     judge_cost = round(sum(float(j.get("costUsd") or 0) for j in judges), 4)
     return {
         "v": 1, "case": case_id, "spec": case.get("spec"), "k": case.get("k", after.get("k") or before.get("k")),
         "failureClass": case.get("failureClass"), "reasonCode": case.get("reasonCode"),
         "before": before, "after": after, "regressions": regressions, "casesOutput": cases_output or "",
+        "fingerprint": comparison,
         "judge": judges, "fix": fix,
         "costUsd": {"before": before["costUsd"], "after": after["costUsd"], "judge": judge_cost,
                     "interrupted": round(before["interruptedCostUsd"] + after["interruptedCostUsd"], 4),
@@ -121,6 +131,18 @@ def table(v: dict) -> str:
     row("cost", f"${b['costUsd']:.2f}", f"${a['costUsd']:.2f}")
     row("pack", ", ".join(b["packIds"]) or "-", ", ".join(a["packIds"]) or "-")
     row("base", f"{b['base']} {str(b['baseSha'])[:12]}", f"{a['base']} {str(a['baseSha'])[:12]}")
+    def fp_text(s: dict) -> str:
+        fps = s.get("fingerprints") or []
+        if not fps:
+            return "not recorded"
+        parts = []
+        for f in fps:
+            m = f.get("servedModel") or {}
+            parts.append(f"{f.get('claudeCodeVersion')}; {m.get('author')} / {m.get('reviewer')}")
+        return " | ".join(parts)
+    row("fingerprint", fp_text(b)[:28], fp_text(a)[:28])
+    fpc = v.get("fingerprint") or {}
+    w(f"{'comparison':<22} {fpc.get('comparison', 'fingerprint-not-recorded')}" + (": " + "; ".join(fpc.get("differences") or []) if fpc.get("differences") and fpc.get("comparison") == "invalid-fingerprint" else ""))
     w("")
     for name, s in (("before", b), ("after", a)):
         w(f"{name} trials:")

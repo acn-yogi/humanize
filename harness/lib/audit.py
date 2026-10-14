@@ -21,6 +21,7 @@ Checks (one code each; a hit carries taskId, spec, class, file, line, round, tur
     REVIEW_REJECTED          the adversarial reviewer rejected a round (its reasons are the text)
     STOP_HOOK_BLOCKED        the Stop hook bounced a finish (loop 2 working; a warning)
     LINT_FAILED              lint among the reviewer's reasons or in the check output
+    MODEL_MISMATCH           the served model in the fingerprint is not the configured one (a warning)
 
 Output: failure classes ranked by recurrence (distinct tasks, then hits), the hits under each.
 Exit 1 when any FAIL-severity class has a hit, 0 on WARN or clean. --promote CODE writes a
@@ -41,6 +42,9 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import fingerprint  # noqa: E402
+
 TRACE_VERSION = 1
 
 # Top-level stream-json event types Claude Code writes; anything else is an unknown shape.
@@ -55,9 +59,11 @@ SEVERITY = {
     "NO_TOOL_CALL": "FAIL",
     "STOP_HOOK_BLOCKED": "WARN",
     "SESSION_ERROR": "WARN",
+    "MODEL_MISMATCH": "WARN",
 }
 DESCRIPTION = {
     "SESSION_ERROR": "the session ended on an API or network error (an error of the environment, not of the trajectory; the other checks skip it)",
+    "MODEL_MISMATCH": "the model the API served (fingerprint.servedModel) is not the configured one",
     "REVIEW_REJECTED": "the adversarial reviewer rejected a round",
     "LINT_FAILED": "lint findings in the reviewer's reasons or the check output",
     "CLAIMED_SUCCESS_NO_STATE": "the final message claims done; the packet or the Stop hook says otherwise",
@@ -321,6 +327,11 @@ def check_task(t: TaskRecord, cwd: Path) -> list[Hit]:
     def hit(code: str, file: Path | str, line: int | None, rnd: int | None, turn: int | None, text: str) -> None:
         hits.append(Hit(code, t.task_id, t.spec, t.cls, rel(file, cwd), line, rnd, turn, text[:500]))
 
+    # The fingerprint: the served model (from the transcripts when the packet predates the field)
+    # against the configured one. A session on the account's headless default shows up here.
+    fp = fingerprint.of_packet(t.packet, t.dir)
+    for line in fingerprint.mismatches(fp, fingerprint.configured_models(t.packet)):
+        hit("MODEL_MISMATCH", t.dir / "packet.json", None, None, None, line)
     # Worker sessions: one per round (round 1 is the --resume continuation).
     calls_so_far: list[ToolCall] = []
     for tr in t.reviewer:

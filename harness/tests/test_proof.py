@@ -19,15 +19,20 @@ def run(i, outcome, task, cost=0.4, why=""):
             "ruffOk": outcome == "pass", "ruffFindings": 0 if outcome == "pass" else 3, "stopBlocks": 0, "costUsd": cost, "workerTurns": 8}
 
 
-def summary(pack, outcomes, base="main"):
+def fp(pack, version="2.1.296 (Claude Code)", author="claude-sonnet-5-5"):
+    return {"packId": f"pack-{pack}", "claudeCodeVersion": version, "servedModel": {"author": author, "reviewer": "claude-opus-5-5"}}
+
+
+def summary(pack, outcomes, base="main", fingerprints=None):
     runs = [run(i + 1, o, T[i]) for i, o in enumerate(outcomes)]
     passes = len([r for r in runs if r["outcome"] == "pass"])
     return {"case": "c", "pack": pack, "base": base, "baseSha": "a" * 40, "spec": "0002-bugfix-precisedelta-sign", "k": 3, "trials": len(runs),
-            "passes": passes, "passK": 1 if passes == len(runs) else 0, "costUsd": sum(r["costUsd"] for r in runs), "packIds": [f"pack-{pack}"], "runs": runs}
+            "passes": passes, "passK": 1 if passes == len(runs) else 0, "costUsd": sum(r["costUsd"] for r in runs), "packIds": [f"pack-{pack}"],
+            "fingerprints": fingerprints or [], "runs": runs}
 
 
 class ProofTests(unittest.TestCase):
-    def make(self, before, after, judges=("earned", "earned", "earned"), cases="PASS  x\nPASS  y\n"):
+    def make(self, before, after, judges=("earned", "earned", "earned"), cases="PASS  x\nPASS  y\n", before_fp=None, after_fp=None):
         d = Path(self.tmp.name)
         (d / "harness/cases").mkdir(parents=True, exist_ok=True)
         (d / "harness/cases/c.json").write_text(json.dumps({"id": "c", "kind": "trajectory", "spec": "0002-bugfix-precisedelta-sign", "k": 3, "failureClass": "REVIEW_REJECTED", "reasonCode": "lint", "fixBranch": "harness/x"}), encoding="utf-8")
@@ -35,9 +40,9 @@ class ProofTests(unittest.TestCase):
         (p / "current").mkdir(parents=True, exist_ok=True)
         (p / "candidate").mkdir(parents=True, exist_ok=True)
         if before is not None:
-            (p / "current/summary.json").write_text(json.dumps(summary("current", before)), encoding="utf-8")
+            (p / "current/summary.json").write_text(json.dumps(summary("current", before, fingerprints=before_fp)), encoding="utf-8")
         if after is not None:
-            (p / "candidate/summary.json").write_text(json.dumps(summary("candidate", after, "harness/x")), encoding="utf-8")
+            (p / "candidate/summary.json").write_text(json.dumps(summary("candidate", after, "harness/x", fingerprints=after_fp)), encoding="utf-8")
             for i, verdict in enumerate(judges):
                 if i < len(after):
                     (p / "candidate" / T[i]).mkdir(parents=True, exist_ok=True)
@@ -87,6 +92,27 @@ class ProofTests(unittest.TestCase):
         v = self.make(None, None, judges=())
         self.assertIn("no reproduce trials on record", v["reasons"])
         self.assertIn("no candidate trials on record", v["reasons"])
+
+    def test_same_environment_with_a_new_pack_compares(self):
+        v = self.make(["fail", "pass", "fail"], ["pass", "pass", "pass"], before_fp=[fp("current")], after_fp=[fp("candidate")])
+        self.assertEqual(v["fingerprint"]["comparison"], "valid")
+        self.assertEqual(v["verdict"], "SHIP")
+
+    def test_a_different_environment_voids_the_comparison(self):
+        v = self.make(["fail", "pass", "fail"], ["pass", "pass", "pass"], before_fp=[fp("current")], after_fp=[fp("candidate", version="2.2.0 (Claude Code)")])
+        self.assertEqual(v["fingerprint"]["comparison"], "invalid-fingerprint")
+        self.assertEqual(v["verdict"], "NO-SHIP")
+        self.assertTrue(any(r.startswith("invalid-fingerprint") for r in v["reasons"]))
+        self.assertIn("comparison             invalid-fingerprint", proof.table(v))
+
+    def test_a_served_model_switch_voids_the_comparison(self):
+        v = self.make(["fail", "pass", "fail"], ["pass", "pass", "pass"], before_fp=[fp("current")], after_fp=[fp("candidate", author="claude-haiku-5")])
+        self.assertEqual(v["fingerprint"]["comparison"], "invalid-fingerprint")
+
+    def test_recorded_proofs_without_fingerprints_say_so_and_still_ship(self):
+        v = self.make(["fail", "pass", "fail"], ["pass", "pass", "pass"])
+        self.assertEqual(v["fingerprint"]["comparison"], "fingerprint-not-recorded")
+        self.assertEqual(v["verdict"], "SHIP")
 
     def test_table_and_case_write(self):
         v = self.make(["fail", "pass", "fail"], ["pass", "pass", "pass"])

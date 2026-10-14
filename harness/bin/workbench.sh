@@ -354,17 +354,25 @@ ended_at="$(date -u +%FT%TZ)"
 evidence_lines="$(find "${tdir}/evidence" -maxdepth 1 -type f -name '*.jsonl' -print0 | sort -z | xargs -0 -r cat | wc -l)"
 find "${tdir}/evidence" -maxdepth 1 -type f -name '*.jsonl' -print0 | sort -z | xargs -0 -r cat > "${rdir}/pack-evidence.jsonl"
 cp "${tdir}/loops.jsonl" "${rdir}/loops.jsonl"
+# The environment fingerprint: the pack, the Claude Code version, and the model the API served
+# (read from the transcripts' assistant messages, never from the configuration). The configured
+# model sits beside it; the audit warns (MODEL_MISMATCH) when the two disagree.
+served_author="$(python3 "${T}/harness/lib/fingerprint.py" served "${rdir}/transcript.jsonl")"
+served_reviewer="$(python3 "${T}/harness/lib/fingerprint.py" served "${rdir}/review-transcript.jsonl")"
 jq -n --arg t "$task_id" --arg trial "$trial" --slurpfile plan "$plan" --slurpfile facts "${rdir}/facts.json" \
   --slurpfile scope "${rdir}/scope.json" --slurpfile decision "${rdir}/decision.json" \
   --argjson verdict "$(cat "${rdir}/verdict.json" 2>/dev/null || echo null)" --argjson sessions "$sessions" \
   --slurpfile loops "${rdir}/loops.jsonl" --arg v "$claude_version" --arg pack "$pack_id" --arg base "$base" \
   --arg s "$started_at" --arg e "$ended_at" --argjson ev "$evidence_lines" \
+  --argjson sa "$served_author" --argjson sr "$served_reviewer" \
   --slurpfile rounds "${rdir}/rounds.jsonl" '
   ($plan[0]) as $p | ($facts[0]) as $f |
   {v: 1, taskId: $t, trial: (if $trial == "" then null else ($trial | tonumber) end),
    spec: {id: $p.id, title: $p.title, issue: $p.issue, class: $p.class, approvedBy: $p.approvedBy, scope: $p.scope},
    placement: "one machine: git worktree, native sandbox (bubblewrap), no microVM",
    claudeCodeVersion: $v, packId: $pack, models: $p.models, caps: $p.caps,
+   fingerprint: {packId: $pack, claudeCodeVersion: $v, servedModel: {author: $sa, reviewer: $sr}},
+   configuredModel: {author: $p.models.worker, reviewer: $p.models.reviewer},
    startedAt: $s, endedAt: $e, baseBranch: $base, baseCommit: $f.baseSha, headCommit: $f.resultSha,
    changedPaths: $f.changedPaths, linesChanged: $f.linesChanged,
    checks: $f.checks, allChecksPass: $f.allChecksPass, grading: $f.grading, scope: $scope[0],

@@ -108,6 +108,16 @@ class CheckTests(unittest.TestCase):
         for code in ("NO_TOOL_CALL", "CLAIMED_SUCCESS_NO_STATE", "UNSOURCED_SPECIFIC"):
             self.assertNotIn("t-FIXTURESESSERR", self.tasks(code))
 
+    def test_model_mismatch_is_a_warning_from_the_fingerprint(self):
+        self.assertIn("t-FIXTUREMODEL", self.tasks("MODEL_MISMATCH"))
+        self.assertEqual(self.by_code["MODEL_MISMATCH"]["severity"], "WARN")
+        h = next(h for h in self.by_code["MODEL_MISMATCH"]["items"] if h["taskId"] == "t-FIXTUREMODEL")
+        self.assertEqual(h["text"], "author: configured sonnet, served claude-haiku-5")
+
+    def test_the_recordings_served_the_configured_models(self):
+        report = audit.audit([ROOT / "demo/recordings"], ROOT)
+        self.assertNotIn("MODEL_MISMATCH", {c["code"] for c in report["classes"]})
+
     def test_lint_failed(self):
         self.assertIn("t-FIXTURELINT", self.tasks("LINT_FAILED"))
         self.assertIn("t-FIXTURELINT", self.tasks("REVIEW_REJECTED"))

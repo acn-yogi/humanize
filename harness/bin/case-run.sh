@@ -72,6 +72,9 @@ score() {
      --argjson ruffFindings "$(grep -cE '^[^ ]+:[0-9]+:[0-9]+: ' <<< "$ruff_out" || true)" --arg rdir "$rdir" '
     (.rounds // []) as $r | ($r[0] // {}) as $r0 |
     {trial: $i, taskId, pack: $pack, base: $base, baseSha: .baseCommit, headSha: .headCommit, packId, dir: $rdir,
+     # The environment fingerprint (pack, Claude Code version, served model): proof.py voids a
+     # before/after comparison whose fingerprints differ on anything but the pack id.
+     fingerprint: (.fingerprint // null),
      checksPass: .allChecksPass,
      changed: ((.changedPaths | length) > 0 and ((.scope.outside + .scope.harness) | length) == 0),
      failFirst: (.grading == null or .grading.ok),
@@ -198,5 +201,6 @@ jq -s --arg cid "$cid" --arg pack "$pack" --arg base "$base" --arg spec "$spec" 
   {case: $cid, pack: $pack, base: $base, baseSha: $sha, spec: $spec, k: $k, trials: $c, errors: $e, passes: $p,
    passK: (if $c > 0 and $p == $c then 1 else 0 end), costUsd: (map(.costUsd // 0) | add // 0),
    interrupted: $intr, interruptedCostUsd: ($intr | map(.costUsd) | add // 0),
-   packIds: (map(.packId // empty) | unique), at: (now | todate), runs: .}' "$trials" > "${out}/summary.json"
+   packIds: (map(.packId // empty) | unique), fingerprints: (map(.fingerprint // empty) | unique),
+   at: (now | todate), runs: .}' "$trials" > "${out}/summary.json"
 jq -c '{case, pack, k, trials, errors, passes, passK, costUsd, interrupted: (.interrupted | length), packIds}' "${out}/summary.json"
