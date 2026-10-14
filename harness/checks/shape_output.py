@@ -10,6 +10,8 @@ from the files and from running the checks, never from the shaper's account:
   - no spec's scope reaches into the harness, the specs, the intents or the plans
   - every check the spec names exists, and every acceptance and fail-first check FAILS on
     today's code (a check that passes today describes work that is already done)
+  - every negative ([checks] must_not_change, optional) PASSES on today's code (one that fails
+    describes a bug, not an invariant: the spec is refused with the reason)
   - the plan (plans/<intent>.md) exists and names every spec
 
 Run from the repository root (or the shaping worktree). {harness} in a check expands to the
@@ -73,6 +75,21 @@ def scope_reaches_harness(scope: list[str]) -> list[str]:
         if planlib.matches(probe, planlib.HARNESS_PATHS) or any(fnmatch.fnmatchcase(h, s) for h in planlib.HARNESS_PATHS):
             hits.append(s)
     return hits
+
+
+def negatives_on_base(p: dict, run) -> list[tuple[str, bool]]:
+    """The negatives ([checks] must_not_change) on today's code: each must PASS. One that fails
+    describes a bug, not an invariant, and belongs in a bugfix spec of its own, so the spec is
+    refused. Returns (line, ok) pairs; run is the check runner (injected for tests)."""
+    out: list[tuple[str, bool]] = []
+    for c in dict.fromkeys(p["checks"].get("mustNotChange") or []):
+        rc = run(c)
+        if rc == 0:
+            out.append((f"{p['id']}: must_not_change holds on today's code: {c}", True))
+        else:
+            out.append((f"{p['id']}: refused: must_not_change already fails on today's code (exit {rc}): {c}; "
+                        "a check that fails today describes a bug, not an invariant, and belongs in a bugfix spec", False))
+    return out
 
 
 def main() -> int:
@@ -145,6 +162,8 @@ def main() -> int:
                 bad(f"{p['id']}: check passes on today's code (it must fail): {c}")
             else:
                 ok(f"{p['id']}: fails on today's code (exit {rc}): {c}")
+        for line, is_ok in negatives_on_base(p, run_check):
+            (ok if is_ok else bad)(line)
         if plan_text and p["id"] not in plan_text:
             bad(f"{p['id']}: the plan does not name it")
         else:

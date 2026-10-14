@@ -25,9 +25,8 @@ def code(s: str) -> str:
     return "`" + s.replace("`", "'") + "`"
 
 
-def main() -> None:
-    run = Path(sys.argv[1])
-    p = json.loads((run / "packet.json").read_text(encoding="utf-8"))
+def render(p: dict) -> str:
+    """The PR body for one packet."""
     spec, d = p["spec"], p["decision"]
     out: list[str] = []
     w = out.append
@@ -57,6 +56,14 @@ def main() -> None:
         w("|---|---|---|")
         for b, r in zip(g["baseChecks"], g["checks"]):
             w(f"| {code(b['cmd'])} | exit {b['exit']} {'(fails, as it must)' if b['exit'] else '(PASSES: no bug shown)'} | exit {r['exit']} |")
+    neg = p.get("negatives")
+    if neg:
+        w("")
+        w("**Must not change.** Behaviour the suite does not cover and the change must keep: each check passes on the base and must still pass on the result.")
+        w("| Check | Base | Result |")
+        w("|---|---|---|")
+        for b, r in zip(neg["baseChecks"], neg["checks"]):
+            w(f"| {code(b['cmd'])} | exit {b['exit']} {'(passes, as it must)' if b['exit'] == 0 else '(FAILS: not an invariant)'} | exit {r['exit']} {'(still passes)' if r['exit'] == 0 else '(FAILS: the change broke it)'} |")
     sc = p["scope"]
     w("")
     w(f"**Scope.** {len(p['changedPaths'])} file(s), {p['linesChanged']} line(s) changed: "
@@ -113,13 +120,29 @@ def main() -> None:
             w(f"- {s.get('tool')} on `{s.get('path')}`")
     w("")
 
+    halt = p.get("halt")
+    if halt:
+        w("### Halt")
+        w(f"- Reason `{halt.get('reason')}`, failure class `{halt.get('failureClass')}`"
+          + (f", stall `{halt.get('stall')}`" if halt.get("stall") else "") + ".")
+        w(f"- {halt.get('stallEvidence') or halt.get('evidence')}")
+        w("")
+
     w("### Provenance")
     w(f"- Base `{p['baseBranch']}` at `{p['baseCommit'][:12]}`; result `{p['headCommit'][:12]}`.")
-    w(f"- {p['claudeCodeVersion']}, pack `{p['packId']}`, placement: {p['placement']}.")
+    fp = p.get("fingerprint") or {}
+    served = fp.get("servedModel") or {}
+    w(f"- {p['claudeCodeVersion']}, pack `{p['packId']}`, placement: {p['placement']}."
+      + (f" Served model: author `{served.get('author')}`, reviewer `{served.get('reviewer')}` (configured `{p['models'].get('worker')}` / `{p['models'].get('reviewer')}`)." if served else ""))
     w(f"- Task `{p['taskId']}`, {p['startedAt']} to {p['endedAt']}. Transcripts, checks log and packet.json stay with the run.")
     w("")
     w("<sub>Opened by the workbench harness on a fork. Nothing here was sent upstream.</sub>")
-    print("\n".join(out))
+    return "\n".join(out)
+
+
+def main() -> None:
+    run = Path(sys.argv[1])
+    print(render(json.loads((run / "packet.json").read_text(encoding="utf-8"))))
 
 
 if __name__ == "__main__":

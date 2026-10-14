@@ -2,7 +2,9 @@
 # intake.sh: the intake check for shaped specs, run by a person on the working tree before
 # approving anything. The same check the shaper's Stop hook and shape.sh ran, repeated here
 # outside any Claude session: valid draft specs, a plan that names them, no scope into the
-# harness, and every check failing on today's code. Then the dispatcher's forecast for them.
+# harness, every acceptance and fail-first check failing on today's code, and every negative
+# ([checks] must_not_change, optional) passing on it: a negative that already fails describes a
+# bug, not an invariant, and the spec is refused with the reason. Then the dispatcher's forecast.
 #
 #   harness/bin/intake.sh [--intent ID] [--issue N] [specs/NNNN-slug.md ...]
 #

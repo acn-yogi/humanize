@@ -210,8 +210,30 @@ evaluate() {  # evaluate <round>: writes facts.json, scope.json, verdict.json, d
       [ "$rc" != 0 ] || { ff_ok=false; ff_reasons="$(jq -c --arg c "$c" '. + ["fail-first: \($c) passes on the base; it must fail there"]' <<< "$ff_reasons")"; }
     done < <(pj '.checks.failFirst[]')
   fi
+  # The negatives (must_not_change): checks that pass on the base and must still pass on the
+  # result, for behaviour the suite does not cover. Both sides run; a failure on either side
+  # halts the task (on the base, the spec is stale: intake refuses such a spec).
+  local neg_base='[]' neg_result='[]' neg_ok=true neg_reasons='[]' negatives=null
+  if [ "$(jq '.checks.mustNotChange | length' "$plan")" != 0 ]; then
+    g -C "$check" checkout --quiet --force --detach "$base_sha"
+    while IFS= read -r c; do
+      rc=0; { echo "### must-not-change on the BASE (must pass): $c"; confined nonet "$check" "$(expand "$c")" "$T"; } >> "${rdir}/checks.log" 2>&1 < /dev/null || rc=$?
+      neg_base="$(jq -c --arg c "$c" --argjson x "$rc" '. + [{cmd: $c, exit: $x}]' <<< "$neg_base")"
+      [ "$rc" = 0 ] || { neg_ok=false; neg_reasons="$(jq -c --arg c "$c" --argjson x "$rc" '. + ["must-not-change: \($c) fails on the base (exit \($x)); it describes a bug, not an invariant"]' <<< "$neg_reasons")"; }
+    done < <(pj '.checks.mustNotChange[]')
+  fi
   g -C "$check" checkout --quiet --force --detach "$head_sha"
   g -C "$check" clean -fdxq -e .venv -e 'src/*/_version.py'
+  if [ "$(jq '.checks.mustNotChange | length' "$plan")" != 0 ]; then
+    while IFS= read -r c; do
+      rc=0; { echo "### must-not-change on the result (must pass): $c"; confined nonet "$check" "$(expand "$c")" "$T"; } >> "${rdir}/checks.log" 2>&1 < /dev/null || rc=$?
+      neg_result="$(jq -c --arg c "$c" --argjson x "$rc" '. + [{cmd: $c, exit: $x, runs: 1, flaky: false}]' <<< "$neg_result")"
+      [ "$rc" = 0 ] || { neg_ok=false; neg_reasons="$(jq -c --arg c "$c" --argjson x "$rc" '. + ["must-not-change: \($c) fails on the result (exit \($x)); the change broke behaviour the spec said must not change"]' <<< "$neg_reasons")"; }
+      log "must not change: $( [ "$rc" = 0 ] && echo PASS || echo "FAIL (exit ${rc})" )  ${c}"
+    done < <(pj '.checks.mustNotChange[]')
+    negatives="$(jq -nc --argjson b "$neg_base" --argjson c "$neg_result" --argjson ok "$neg_ok" --argjson r "$neg_reasons" \
+      '{baseChecks: $b, checks: $c, ok: $ok, reasons: $r}')"
+  fi
   local results='[]' all_pass=true
   while IFS= read -r c; do
     rc=0; { echo "### check (result, no network): $c"; confined nonet "$check" "$(expand "$c")" "$T"; } >> "${rdir}/checks.log" 2>&1 < /dev/null || rc=$?
@@ -245,9 +267,9 @@ evaluate() {  # evaluate <round>: writes facts.json, scope.json, verdict.json, d
   flags="$(node --no-warnings "${T}/harness/lib/flags.ts" <<< "$changed")"
   jq -n --arg t "$task_id" --argjson p "$changed" --argjson n "$lines" --argjson l "$links" --argjson c "$results" \
     --argjson ok "$all_pass" --arg h "$head_sha" --arg b "$base_sha" --arg bs "$bundle_sha" --argjson gr "$grading" \
-    --argjson fl "$flags" \
+    --argjson fl "$flags" --argjson neg "$negatives" \
     '{taskId: $t, changedPaths: $p} + $fl + {touchesLinks: $l, linesChanged: $n, checks: $c, allChecksPass: $ok,
-      resultSha: $h, baseSha: $b, grading: $gr}
+      resultSha: $h, baseSha: $b, grading: $gr, negatives: $neg}
       + (if $bs == "" then {resultBundleVersionId: null, resultBundleETag: null}
          else {resultBundleVersionId: ("local-" + $t), resultBundleETag: ("\"" + $bs + "\"")} end)' > "${rdir}/facts.json"
   # shellcheck disable=SC2046
@@ -351,6 +373,7 @@ while needs_retry && [ "$round" -lt "$(caps retries)" ]; do
     jq -r '.reasons[] | "- router: \(.)"' "${rdir}/decision.json"
     [ -f "${rdir}/verdict.json" ] && jq -r '.reasons[] | "- reviewer: \(.)"' "${rdir}/verdict.json"
     jq -r '.checks[] | select(.exit != 0) | "- failing check (fresh clone, no network): \(.cmd)"' "${rdir}/facts.json"
+    jq -r '.negatives.reasons[]? | "- \(.)"' "${rdir}/facts.json"
     echo
     echo "Fix the causes within the spec's scope, then finish. Do not weaken or skip any check."
   } > "${tdir}/prompt-${round}.md"
@@ -399,7 +422,7 @@ jq -n --arg t "$task_id" --arg trial "$trial" --slurpfile plan "$plan" --slurpfi
    configuredModel: {author: $p.models.worker, reviewer: $p.models.reviewer},
    startedAt: $s, endedAt: $e, baseBranch: $base, baseCommit: $f.baseSha, headCommit: $f.resultSha,
    changedPaths: $f.changedPaths, linesChanged: $f.linesChanged,
-   checks: $f.checks, allChecksPass: $f.allChecksPass, grading: $f.grading, scope: $scope[0],
+   checks: $f.checks, allChecksPass: $f.allChecksPass, grading: $f.grading, negatives: $f.negatives, scope: $scope[0],
    review: $verdict, decision: $decision[0], rounds: $rounds, halt: $halt,
    loops: {
      sessions: $sessions,

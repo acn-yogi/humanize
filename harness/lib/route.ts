@@ -47,6 +47,11 @@ if (scope.harness.length > 0) {
   decision = { path: "reject", reasons: [`changes the harness that judges it: ${scope.harness.slice(0, 5).join(", ")}`] };
 } else if (scope.outside.length > 0) {
   decision = { path: "reject", reasons: [`outside the spec's scope: ${scope.outside.slice(0, 5).join(", ")}`] };
+} else if (facts?.negatives && facts.negatives.ok !== true) {
+  // The negatives (must_not_change) must pass on the base and on the result; a failure on
+  // either side is a halt with the side named.
+  const why = Array.isArray(facts.negatives.reasons) ? facts.negatives.reasons.map((r: unknown) => String(r).slice(0, 300)).slice(0, 10) : [];
+  decision = { path: "reject", reasons: ["must-not-change did not hold", ...why] };
 } else {
   decision = decide({
     taskId: facts?.taskId,
