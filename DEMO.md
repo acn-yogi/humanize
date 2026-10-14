@@ -487,7 +487,7 @@ harness/bin/cases.sh                                           # the regression 
 
 | Step | What the record says |
 |---|---|
-| 1 Mine | `harness/bin/audit.sh` over the three live tasks and their twelve sessions, with no model asked: `REVIEW_REJECTED` on 3 of 3 tasks (5 rounds), `LINT_FAILED` on 1 (PR #3: new test lines over 88 chars, ruff E501). No ignored tool error, no unsourced claim, no success claimed against the state. Exit 1. |
+| 1 Mine | `harness/bin/audit.sh` over the three live tasks and their twelve sessions, with no model asked: `REVIEW_REJECTED` on 3 of 3 tasks (5 rounds), `LINT_FAILED` on 1 (PR #3: new test lines over 88 chars, ruff E501). No ignored tool error, no unsourced claim, no success claimed against the state. Exit 1. The recording was re-generated on 14 October over every task on record, the proof trials included: 12 tasks, `REVIEW_REJECTED` on 7, `SESSION_ERROR` on the 3 proxy deaths, `LINT_FAILED` on 1, and none of the new classes (`SPEC_CONTRADICTION`, `SCOPE_BLOCKS_FIX`, `MODEL_MISMATCH`). |
 | 2 Case | Two cases on spec 0002 (the bugfix with the lint finding), base `52a0efb`, k=3. The broad one, `lint-in-quick-checks`, asks for the mined class as a whole: ruff clean on the result and the reviewer approving at round 0. Its narrow half, `lint-on-result`, asks only what the fix can answer: ruff clean on the result's changed Python files, the trusted checks passing. The fix under test for both: the Stop hook runs the repository's lint beside the spec's quick checks. |
 | 3 Reproduce | `case-run.sh --pack current`: 0 of 3 conclusive trials passed, for both cases. Every result carried ruff E501 (3, 1 and 1 findings); one was also rejected by the reviewer. Three earlier trials died on a TLS-inspecting proxy and are scored `error`, not `fail`: $0.43 spent on nothing, named as such. |
 | 4 Fix | Branch `harness/lint-in-quick-checks`, one commit, three files: `harness/hooks/stop-checks.sh` runs `[checks] lint` after the quick checks, `harness/config.toml` names `ruff check --no-fix src tests` and installs ruff at the pre-commit pin, `harness/lib/plan.py` carries the list. The hook is in the pack id, so the candidate is a new pack (`pack-7cd23886890b`). The evaluator (`harness/cases`, `cases.sh`) was not touched. |
@@ -510,7 +510,7 @@ Then the two commands that feed the loop from people and read the signals back:
 
 ```
 harness/bin/corrections.sh --dry-run    # human PR comments on the fork's harness PRs, classified; nothing written
-harness/bin/scorecard.sh                # takeovers 0, human PR comments 0, PRs with no correction 3 of 3, cost per merged PR n/a, recurrence 0 over 1 proven case, pack size
+harness/bin/scorecard.sh                # takeovers 0, human PR comments 0, PRs with no correction 3 of 3, cost per merged PR n/a, recurrence 0 over 1 proven case, halts by failure class 0, stalls by category 0, pack size
 ```
 
 The fork has no human PR comment yet, so the corrections ledger is empty and the scorecard says
@@ -518,6 +518,37 @@ so; `correct.sh` records a takeover or hand edit when one happens. Recurrence no
 proven case: a `lint` correction dated after its `provenAt` would count against it.
 
 **Fallback:** `demo/run-demo.sh --dry-run --acts 5` replays all of it from the recordings.
+
+### Hygiene from the eval hillclimb guide (no spend)
+
+The proving loop is hillclimbing applied to the pack, so Anthropic's eval hillclimb guide was
+read against it after the run above. What it added, with the honest status of each piece on
+this fork (14 October 2026):
+
+| Piece | Status | Where it lives |
+|---|---|---|
+| Environment fingerprint | **Adopted.** Every packet carries `fingerprint: {packId, claudeCodeVersion, servedModel: {author, reviewer}}`, the served model read from the transcripts' assistant messages, never from the configuration, with `configuredModel` beside it. A mismatch is the audit's `MODEL_MISMATCH` warning. Trials, summaries and proof verdicts carry both sides' fingerprints; a before/after pair that differs on anything but the pack id is `invalid-fingerprint`, a NO-SHIP reason. The recorded packets predate the field and derive it from their transcripts: sonnet and opus, as configured. | `harness/lib/fingerprint.py`, `workbench.sh`, `case-run.sh`, `prove.sh`, `proof.py` |
+| Failure classes | **Adopted.** Every halted ledger row carries `failureClass` from `harness-error`, `refusal`, `timeout`, `genuine`, read from the session facts (exit code, error subtype, API error text, a refusal with no change). The scorecard reports them apart, never as one failure rate. | `harness/lib/stall.py`, `scorecard.sh` |
+| Stall categories | **Adopted.** A halt at the retry cap carries `stall` from `artifact-gap`, `grader-disagreement`, `harness-or-infra`, `structural`, `variance`, each chosen from signals already on record. A structural stall (the spec contradicts itself, or the scope cuts the change off from a path the checks need) is read after every rejected round and ends the task there with reason `stall-structural`, before the remaining retries are spent. | `stall.py`, `workbench.sh` (loop 3) |
+| Audit classes | **Adopted.** `SPEC_CONTRADICTION` and `SCOPE_BLOCKS_FIX` name the structural stalls so the mine step can rank them; one fixture each. Neither fires on the recordings. | `harness/lib/audit.py` |
+| No-change control | **Designed in.** `case-run.sh --pack control` runs the current pack a second time at the same k; `proof.py` reads the spread between the two current-pack runs as the noise floor and refuses a delta inside it as `too-small-to-see`. No proof on this fork has a control arm yet; the verdict says so ("noise floor not measured"). | `case-run.sh`, `proof.py` |
+| Held-out split | **Designed in.** A case may name `holdout: [case ids]`, cases the improver never reads; `case-run.sh --holdout` runs them on the same pack and `proof.py` reports their delta apart from the training case's. With two cases the suite cannot be split, and the verdict says "no holdout: suite too small". | `harness/cases/*.json`, `case-run.sh`, `proof.py` |
+| Negatives | **Optional, per spec.** `[checks] must_not_change`: checks that pass on the base and must still pass on the result, for behaviour the suite does not cover. Intake refuses a spec whose negatives already fail (a bug, not an invariant); the trusted re-run runs them on both sides and halts when they do not hold; the packet shows the base/result table. No committed spec uses them yet: this suite is thick around the changes made so far. | `plan.py`, `shape_output.py`, `workbench.sh`, `route.ts`, `evidence.py` |
+| Classes `build` and `llm-tune` | **Defined.** `build` is new behaviour with no release flag: per PR, fail-first, `flag = "none"`. `llm-tune` exists only where a repository holds an LLM application: per PR, and `plan.py` refuses a spec without an `[eval]` table naming `command` and `holdout`; its template tells the session to hillclimb one lever per round on the training set, keep or revert, and never read the holdout, whose score the workbench takes once at the end. This library holds no LLM application, so no `llm-tune` spec runs here. | `harness/classes.toml`, `plan.py` |
+
+The commands, none of which spends:
+
+```
+python3 harness/lib/fingerprint.py packet demo/recordings/t-01M4RZHVGFWY1FXM7RNXWAVNQA   # the fingerprint of a recorded task, served vs configured
+harness/bin/scorecard.sh --offline                                   # halts by failure class and stalls by category, two separate lines
+harness/bin/audit.sh                                                  # MODEL_MISMATCH, SPEC_CONTRADICTION, SCOPE_BLOCKS_FIX among the classes
+python3 harness/lib/proof.py . lint-on-result --cases-output demo/recordings/proof/lint-in-quick-checks/cases.txt   # control and holdout lines in the verdict
+python3 -m unittest discover -s harness/tests                        # the fingerprint, stall, plan, negatives and proof tests on synthetic records
+```
+
+What would spend, when a case earns it: `case-run.sh <case> --pack control --k 3` for the
+noise floor (about the cost of one reproduce step), and `--holdout` once the suite has enough
+cases to hold some out.
 
 ### If there is time, or questions: the queue loop, recorded
 
@@ -669,6 +700,8 @@ harness/bin/correct.sh t-<id> --action takeover --reason lint     # a correction
 harness/bin/scorecard.sh                     # takeovers, comments, uncorrected PRs, cost per merged PR, recurrence, pack size
 harness/bin/case-run.sh harness/cases/lint-in-quick-checks.json --pack current --k 3      # reproduce: k trials, about $0.35 each
 harness/bin/case-run.sh harness/cases/lint-in-quick-checks.json --pack candidate --k 3    # prove: k trials on the fix branch
+harness/bin/case-run.sh harness/cases/lint-in-quick-checks.json --pack control --k 3      # control: the current pack again, the noise floor
+harness/bin/case-run.sh harness/cases/lint-in-quick-checks.json --pack candidate --holdout   # also the case's held-out cases, if it names any
 harness/bin/judge.sh runs/proofs/lint-in-quick-checks/candidate/t-<id>      # both trajectories, a different model, about $0.10
 python3 harness/lib/proof.py . lint-in-quick-checks --cases-output <cases.sh output> --write-case --record   # the verdict table
 harness/bin/cases.sh                         # the regression suite: flags cases re-run, trajectory cases listed with their proof
