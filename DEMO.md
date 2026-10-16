@@ -550,6 +550,37 @@ What would spend, when a case earns it: `case-run.sh <case> --pack control --k 3
 noise floor (about the cost of one reproduce step), and `--holdout` once the suite has enough
 cases to hold some out.
 
+### Rigor from the eval design article (no spend)
+
+Anthropic's article "Automating Eval Design and Hillclimbing with Claude"
+(claude.dev/blog/automating-eval-design-and-hillclimbing/) was read against the proving loop
+a second time. Eight practices were mirrored with the names the harness code already uses.
+Everything is read from records on disk; none of it calls a model, and the recorded demo
+output (Act 5 and Act 7, proof spend $2.95, Act 7 at $0) is not changed. Several of these
+stay informational until a proof has the arm that feeds them (a control arm, a holdout).
+
+| Practice | What the harness does | Field or verdict spelling | Where |
+|---|---|---|---|
+| Pre-flight noise gate | When a control arm exists and its noise floor (the spread of the two current-pack runs) is above `--min-detectable-delta F` (default 0.1), the proof stops before it reads as evidence: verdict `noise-too-high`, "add repetitions or cases". `case-run.sh --pack candidate` runs the same gate first and refuses to spend on the candidate. No control arm leaves behaviour as it was. | `minDetectableDelta`, verdict `noise-too-high` | `proof.py`, `case-run.sh`, `rigor.py` |
+| Suite sanity | The verdict says whether the suite can still teach anything. `suite {baselinePassRate, saturated, objectiveSuggestion}`: saturated at a baseline pass rate of 0.95 or more, then the suggestion is `cost-at-parity`. `impossibleOrAmbiguous` lists the case ids that failed every replicate in every arm, which usually means the case is impossible or its check is ambiguous. `graderAgreement {runs, agreed, disagreeing}` comes from `judge.sh --repeat N` (default 1), and is null when no judge ran. | `suite`, `impossibleOrAmbiguous`, `graderAgreement` | `proof.py`, `judge.py` |
+| Judge independence | `judge.json` records `judgeModel`. The judge refuses (verdict `judge-not-independent`) when it is the model that ran the trial. When a judge compares a before output with an after output (`judge.sh --before DIR`), the A/B order is shuffled and `judgeBlind: true` is recorded. The prompt asks for a rubric of checkable claims, each with a verbatim quote, and no numeric scale. A claim whose quote is not in the transcript makes the verdict `unknown`. | `judgeModel`, `judgeBlind`, `claims`, verdict `judge-not-independent` | `judge.py` |
+| Keep, revert or overfit | `rule {trainDelta, heldOutDelta, decision}` with decision `keep`, `revert` or `overfit-suspected`. Keep only when train and held-out both improved and nothing regressed. Train up with held-out flat or down is `overfit-suspected`. Any regression is `revert`. Informational: it is present whenever a holdout exists and never changes SHIP or NO-SHIP. | `rule` | `proof.py`, `rigor.py` |
+| Leak guards | `pack-embeds-failure`: a pack or hook diff that contains a verbatim failure quote, or the id of a case being proved, is flagged. It warns by default and blocks with `--block-on-leak`. `cases.sh` warns `case-start-carries-answer` when a case's base is not the pre-fix commit (the fix is already in its history) or its expected file already contains the fix text. Both are small heuristics: a run of eight or more words from a recorded failure, a whole-word match on a case id, `git merge-base --is-ancestor` for the base, a substring for the fix text. They catch the careless leak, not the clever one. Run on the recorded fix, the guard flags one: the comment in `stop-checks.sh` names its own case, `lint-in-quick-checks` (a warning, nothing blocks). | check `pack-embeds-failure`, `leaks`, warning `case-start-carries-answer` | `proof.py`, `cases.sh`, `rigor.py` |
+| Cost at parity | `--objective performance` (default) or `cost-at-parity`. Under cost-at-parity a candidate is proven only when accuracy is within the noise floor or better, and the mean cost per trial is lower by more than the control arm's cost spread. Otherwise verdict `cost-not-lower`. `scorecard.sh` prints cost per merged PR in dollars. | `objective`, `costPerTrial`, verdict `cost-not-lower` | `proof.py`, `scorecard.py` |
+| Adversarial sampling | `audit.sh --promote <class>` drafts a case with `whyHard` set to `TODO: why is this hard` and `promotedAt`. `case-run.sh` and `cases.sh` refuse a promoted case whose `whyHard` is missing or still the placeholder (verdict `case-missing-why-hard`). A case with neither field only warns `legacy-no-why-hard`. The two shipped cases carry a written `whyHard`. | `whyHard`, `promotedAt`, verdict `case-missing-why-hard`, warning `legacy-no-why-hard` | `audit.py`, `case-run.sh`, `cases.sh` |
+| Stall review | After two consecutive flat rejected attempts (each rejected with no fewer failures than the one before), the halted ledger row carries `stallReview`: the remaining failures sorted by the existing stall category, no edit made, and only the `genuine` ones under `continueWith`. The retry caps are untouched. | `stallReview {flatAttempts, edited, byCategory, continueWith}` | `stall.py`, `workbench.sh` |
+
+The commands, none of which spends (the unit tests plant every record they read):
+
+```
+python3 harness/lib/proof.py . lint-on-result --min-detectable-delta 0.1 --objective performance
+python3 harness/lib/proof.py . lint-on-result --block-on-leak
+harness/bin/judge.sh <trial dir> --repeat 3 --dry-run     # prints the rubric prompt, asks no model
+harness/bin/audit.sh --promote REVIEW_REJECTED            # drafts a case; whyHard is a placeholder until a person writes it
+harness/bin/cases.sh                                      # WARN legacy-no-why-hard / case-start-carries-answer, REFUSE case-missing-why-hard
+python3 -m unittest discover -s harness/tests
+```
+
 ### If there is time, or questions: the queue loop, recorded
 
 One real dispatcher wake-up (`demo/recordings/dispatch-wakeup.log`) took the two approved
