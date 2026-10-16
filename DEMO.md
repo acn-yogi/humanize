@@ -581,6 +581,122 @@ harness/bin/cases.sh                                      # WARN legacy-no-why-h
 python3 -m unittest discover -s harness/tests
 ```
 
+### The lessons ledger (no spend)
+
+Recorded failures already feed the mine step (`audit.sh`) and the proving loop, but nothing
+recorded a lesson as a lesson: what was found, who decided what to do with it, and whether it
+came back. The lessons ledger is that record. It is the meta loop made durable, not a new
+pillar: the proving loop already is hillclimbing on the pack, and the ledger is what feeds it.
+It reads records already on disk, calls no model and spends nothing, and it does not change
+the recorded demo output (Act 5, Act 7 at $0, proof spend $2.9488). The names match the
+lessons ledger section of the Claude native proposal.
+
+**The file.** `runs/lessons.jsonl`, append-only. A change of state appends a new row for the
+same `id`; readers fold by `id` and the last row wins, so history is never rewritten. A row:
+
+```
+{id, ts, source, sourceRef, finding, class, signature, evidence, proposedDisposition,
+ status, links {caseId, specId, packId, prRef}, recurrences, portable, weight,
+ approvedBy, closedBy, note}
+```
+
+`source` is one of `eval-fail`, `test-fail`, `human-correction`, `build-retro`, `external`.
+`evidence` is a list of refs and paths. `links` may also carry `proof` (the verdict path that
+closed it) and `changePaths` (the paths a proposed change would touch, used by the guardrail
+refusal below). `ts` is the time the row was written. `id` is `les-` plus the first eight
+characters of `signature`.
+
+**Three automatic feeds.** Nobody writes a lesson from scratch: `lessons.sh draft` reads a
+record the harness already holds and appends a `draft`. Weights: human-correction 3,
+eval-fail 2, test-fail 1, build-retro 2, external 2. A person is the one signal the checks
+did not already have, so it weighs most.
+
+| Feed | What drafts a lesson | Source |
+|---|---|---|
+| 1. Eval fails | Proof verdicts in `runs/proofs/*/verdict.json`: `noise-too-high`, `overfit-suspected` (the `rule` decision), `impossible-or-ambiguous`, `graderAgreement` with disagreeing runs, `cost-not-lower`, `judge-not-independent`, and a `NO-SHIP` kept on record. Also every `audit.sh` code except `STOP_HOOK_BLOCKED` (loop 2 doing its job). | `eval-fail` |
+| 2. Testing | Halted ledger rows by `failureClass` and stall category, rejected reviews, failing trusted checks, and `stallReview.continueWith` items. | `test-fail` |
+| 3. Human corrections | `corrected` ledger rows, as written by `corrections.sh` (PR comments) and `correct.sh` (takeovers, edits, rejections). | `human-correction` |
+
+**Dedup and recurrence.** `signature` is the sha1 of `class` plus a normalized finding key
+(lower case, task ids, hashes, paths, urls and numbers replaced by tokens). Findings are
+written from codes, never from free text, so one cause is one signature. Many occurrences of
+one signature are one lesson: `recurrences` counts distinct occurrences (a task, a proof
+verdict, a comment) and `evidence` grows. An occurrence already in `evidence` is skipped, so
+drafting is idempotent: running it twice adds nothing. A signature whose lesson was rejected
+is not drafted again. The weight of a lesson is the highest weight among its sources.
+
+**Proposed disposition.** One of `case`, `spec`, `pack`, `code`, `parked`, `none`, chosen by
+simple rules and re-evaluated while the lesson is still a `draft`:
+
+| Finding | Proposes |
+|---|---|
+| `REVIEW_REJECTED`, trusted checks failing, genuine halts, `continueWith` items: seen on 2 or more tasks | `case` (seen once: `parked`) |
+| `noise-too-high`, `impossible-or-ambiguous`, human correction `test` or `wrong-behaviour` | `case` |
+| Stall `structural` or `artifact-gap`, `SPEC_CONTRADICTION`, `SCOPE_BLOCKS_FIX`, human correction `scope` | `spec` |
+| A proof refusal (`NO-SHIP`, `cost-not-lower`, `overfit-suspected`), model refusal, `LINT_FAILED`, human correction `lint` or `style`, the trajectory codes `NO_TOOL_CALL`, `IGNORED_ERROR`, `UNSOURCED_SPECIFIC`, `CLAIMED_SUCCESS_NO_STATE` | `pack` |
+| Failure class `harness-error` or `timeout`, stall `harness-or-infra` or `grader-disagreement`, `judge-not-independent`, grader disagreements, `MODEL_MISMATCH`, `SESSION_ERROR` | `code` |
+| Stall `variance`, human correction `question` | `none` |
+| Anything else | `parked` |
+
+**Lifecycle.** `draft`, `approved`, `routed`, `in-progress`, `closed`, `recurred`,
+`rejected`. Only a person moves a lesson from `draft` (or `recurred`) to `approved` or
+`rejected`: `approve` and `reject` require `--by <name>` and refuse, exit 2, when the
+environment says an agent session is running. `HARNESS_AGENT_SESSION=1` is exported by
+`workbench.sh`, `dispatch.sh`, `shape.sh`, `case-run.sh`, `prove.sh`, `judge.sh` and
+`watch-tickets.sh`, so a worker or reviewer that tries it is told plainly. Agents cannot
+approve their own lessons. Run it in your own terminal.
+
+**Routing** uses only paths that already exist, and runs nothing:
+
+| Disposition | What `route` does |
+|---|---|
+| `case` | The existing `audit.sh --promote <class>` path: writes `harness/cases/drafts/<class>.json` with the `whyHard` placeholder and `promotedAt`, and links `caseId`. A class that is not an audit code, or has no hit, is skipped and stays `approved` with a note: a person writes that case. |
+| `spec` | Writes `specs/drafts/<id>.md` in the spec format (front matter, `status = "draft"`, a body that states the lesson). Nothing runs, and the dispatcher does not read `specs/drafts`. Links `specId`. |
+| `pack` | Links the proving loop and prints the exact `case-run.sh` and `prove.sh` commands. Does not run them. |
+| `code`, `parked`, `none` | Recorded only. |
+
+Routing never edits guardrails, managed settings, scope rules or the kill switch. It refuses
+(exit 3, the lesson stays `approved`) any lesson whose `links.changePaths` (set with
+`route --change-path P`) touches `harness/guardrails`, a `settings` file, the scope hook, or
+the `HALT` kill switch, and the same check guards every path the router writes. A lesson that
+would touch one is for a person, as code or spec.
+
+**Closing.** `close <id> --by <name> --proof <verdict path>` needs a file that exists and
+carries `"verdict": "SHIP"`. `close <id> --by <name> --pr <ref>` needs a merged PR on the
+fork (`gh`, or `--prs FILE` for a saved `gh pr list` JSON). The reference is stored in
+`links`. Anything else is refused. A closed lesson whose signature appears again with a newer
+record is appended as `recurred`, `recurrences` plus one, and ranks first.
+
+**Ranking.** `list` orders: `recurred` first, then `weight` times `recurrences`, then newest.
+Filters `--status`, `--source`; `--json` for the folded rows. The mine step (`audit.sh`)
+prints the open lessons under the failure classes in the same order and with the same
+weights. Lessons with disposition `parked` or `none` are decisions on record and stay off
+that list.
+
+**Portable lessons.** `approve --portable` marks a lesson `portable`. `seed --out FILE` exports
+only portable rows as `{class, finding, proposedDisposition}`: no evidence, no paths, no task
+ids, no PR refs, no client names (`--deny WORD` adds names to strip). `seed --in FILE` imports
+them into a new repo as `draft` rows with source `external`, so a new onboarding does not
+relearn them.
+
+**Measured.** `scorecard.sh` gains a lessons block: opened, closed, recurred, median days to
+close, share by source, and the headline: closed lessons that came back (the fix did not hold).
+
+```
+harness/bin/lessons.sh draft                          # feeds 1 to 3, idempotent
+harness/bin/lessons.sh list [--status S] [--source S] [--json]
+harness/bin/lessons.sh approve <id> --by <name> [--portable]   # a person, not an agent session
+harness/bin/lessons.sh reject <id> --by <name> [--reason TEXT]
+harness/bin/lessons.sh route [<id>...] [--change-path P]
+harness/bin/lessons.sh start <id> --by <name>         # routed to in-progress
+harness/bin/lessons.sh close <id> --by <name> --proof runs/proofs/<case>/verdict.json
+harness/bin/lessons.sh close <id> --by <name> --pr <ref> [--prs FILE]
+harness/bin/lessons.sh seed --out FILE | --in FILE
+```
+
+A recorded sample, drafted from the recorded runs and proofs, is
+`demo/recordings/lessons.jsonl`. The rules are covered by `harness/tests/test_lessons.py`.
+
 ### If there is time, or questions: the queue loop, recorded
 
 One real dispatcher wake-up (`demo/recordings/dispatch-wakeup.log`) took the two approved
