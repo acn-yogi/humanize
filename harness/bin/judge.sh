@@ -6,6 +6,14 @@
 # verdict unknown. Writes <trial dir>/judge.json.
 #
 #   harness/bin/judge.sh <trial run dir> [--model opus] [--budget 0.15] [--max-turns 3] [--dry-run]
+#                        [--repeat N] [--before DIR] [--seed S]
+#
+# Independence and rigor (harness/lib/judge.py, DEMO.md "Rigor from the eval design article"):
+# judge.json records judgeModel and the judge refuses (verdict judge-not-independent) when it is the
+# model that ran the trial; --before DIR shuffles the before and after results into A and B
+# (judgeBlind: true); --repeat N (default 1) runs the judge N times on the same trial and records
+# graderAgreement {runs, agreed, disagreeing}. The prompt asks for a rubric of checkable claims,
+# each with a verbatim quote, not a numeric scale.
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck source=../lib/auth.sh

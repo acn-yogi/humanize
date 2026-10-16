@@ -2,6 +2,7 @@
 """The verdict table of one proof: before pass^k, after pass^k, regressions, cost, judge verdicts.
 
     proof.py <repo root> <case id> [--fix-branch BRANCH] [--cases-output FILE] [--write-case] [--record]
+                                   [--min-detectable-delta F] [--objective performance|cost-at-parity] [--block-on-leak]
 
 Reads runs/proofs/<case>/current/summary.json (the reproduce step), runs/proofs/<case>/candidate/
 summary.json (the prove step), runs/proofs/<case>/control/summary.json when present (the
@@ -19,6 +20,18 @@ The held-out delta is reported apart when a holdout exists; "no holdout: suite t
 otherwise. Anything else is NO-SHIP with the reasons named. --write-case puts the proof on the case in
 harness/cases/<case>.json (proof, status, fixedIn, provenAt) whatever the verdict, so the suite
 lists it; --record copies the proof folder (without bundles) to demo/recordings/proof/.
+
+Rigor from Anthropic's "Automating Eval Design and Hillclimbing with Claude" (DEMO.md, "Rigor from
+the eval design article"; the checks live in rigor.py). The verdict JSON gains: minDetectableDelta
+(--min-detectable-delta, default 0.1; a control arm whose noise floor exceeds it makes the verdict
+`noise-too-high`), suite {baselinePassRate, saturated, objectiveSuggestion}, impossibleOrAmbiguous,
+graderAgreement {runs, agreed, disagreeing} (null without a judge), rule {trainDelta, heldOutDelta,
+decision: keep | revert | overfit-suspected} (informational, whenever a holdout exists), leaks (check
+`pack-embeds-failure`: warns, and with --block-on-leak the verdict is `pack-embeds-failure`),
+objective (--objective performance|cost-at-parity; under cost-at-parity a candidate whose accuracy
+is within the noise floor but whose mean cost per trial is not lower by more than the control arm's
+cost spread is `cost-not-lower`), and `judge-not-independent` when a judge is the model that ran
+the trial. These special verdicts replace SHIP/NO-SHIP: nothing was proven, nothing was disproven.
 Standard library only.
 """
 
@@ -34,6 +47,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fingerprint  # noqa: E402
+import rigor  # noqa: E402
 
 
 def load(p: Path):
@@ -73,6 +87,24 @@ def control_arm(before: dict, control: dict | None, after: dict) -> dict:
             "beforeRate": rate(before), "controlRate": rate(control), "afterRate": rate(after) if after["trials"] else None, "control": control}
 
 
+def cost_arm(before_summary: dict | None, after_summary: dict | None, control_summary: dict | None) -> dict:
+    """Mean cost per trial on each side, and the control arm's cost spread (the current pack twice)."""
+    b, a, c = (rigor.mean_cost(x) for x in (before_summary, after_summary, control_summary))
+    spread = round(abs(b - c), 4) if b is not None and c is not None else 0.0
+    return {"before": b, "after": a, "control": c, "spread": spread,
+            "lower": b is not None and a is not None and (b - a) > spread}
+
+
+def git_pack_diff(root: Path, branch: str | None) -> str:
+    """The branch's diff against main restricted to the pack and hook paths."""
+    if not branch or not git(root, "rev-parse", "--short", branch):
+        return ""
+    mb = git(root, "merge-base", "main", branch)
+    tip = git(root, "rev-parse", branch)
+    base = mb if mb and mb != tip else f"{branch}~1"
+    return git(root, "diff", base, branch, "--", *rigor.PACK_PATHS)
+
+
 def holdout_arm(root: Path, case: dict) -> dict:
     """The held-out cases' delta, apart from the training case's. The improver never reads them."""
     ids = [str(x) for x in (case.get("holdout") or [])]
@@ -96,11 +128,15 @@ def holdout_arm(root: Path, case: dict) -> dict:
                                      "held-out cases not run on both packs yet: " + ", ".join(unrun) + " (case-run.sh --holdout)")}
 
 
-def build(root: Path, case_id: str, fix_branch: str | None, cases_output: str | None) -> dict:
+def build(root: Path, case_id: str, fix_branch: str | None, cases_output: str | None, *,
+          min_detectable_delta: float = rigor.DEFAULT_MIN_DETECTABLE_DELTA, objective: str = "performance",
+          block_on_leak: bool = False, pack_diff: str | None = None) -> dict:
     case = load(root / "harness/cases" / f"{case_id}.json") or {}
     pdir = root / "runs/proofs" / case_id
-    before = side(load(pdir / "current/summary.json"))
-    after = side(load(pdir / "candidate/summary.json"))
+    before_summary = load(pdir / "current/summary.json")
+    after_summary = load(pdir / "candidate/summary.json")
+    before = side(before_summary)
+    after = side(after_summary)
     control_summary = load(pdir / "control/summary.json")
     control = control_arm(before, side(control_summary) if control_summary else None, after)
     holdout = holdout_arm(root, case)
@@ -109,7 +145,9 @@ def build(root: Path, case_id: str, fix_branch: str | None, cases_output: str | 
         j = load(pdir / "candidate" / str(r.get("taskId") or "") / "judge.json") if r.get("taskId") else None
         if j:
             judges.append({"taskId": r["taskId"], "verdict": j.get("verdict"), "quote": j.get("quote", ""), "reasons": j.get("reasons", []),
-                           "quoteFound": j.get("quoteFound"), "model": j.get("model"), "costUsd": j.get("costUsd", 0)})
+                           "quoteFound": j.get("quoteFound"), "model": j.get("judgeModel") or j.get("model"), "judgeModel": j.get("judgeModel") or j.get("model"),
+                           "workerModel": j.get("workerModel"), "judgeBlind": j.get("judgeBlind"), "graderAgreement": j.get("graderAgreement"),
+                           "costUsd": j.get("costUsd", 0)})
     branch = fix_branch or case.get("fixBranch")
     fix = {"branch": branch, "sha": git(root, "rev-parse", "--short", branch) if branch else "", "files": [], "diffstat": ""}
     if branch and fix["sha"]:
@@ -129,11 +167,19 @@ def build(root: Path, case_id: str, fix_branch: str | None, cases_output: str | 
     if cases_output is not None:
         regressions = len([l for l in cases_output.splitlines() if l.startswith("FAIL")])
     reasons = []
+    cost = cost_arm(before_summary, after_summary, control_summary)
+    parity = objective == "cost-at-parity"
+    floor = control["noiseFloor"] if control["present"] and control["noiseFloor"] is not None else 0.0
     reproduced = before["trials"] > 0 and before["passes"] < before["trials"]
-    if not reproduced:
+    if not parity and not reproduced:
         reasons.append("not reproduced: the case never failed on the current pack" if before["trials"] else "no reproduce trials on record")
+    if parity and not before["trials"]:
+        reasons.append("no reproduce trials on record")
     if after["trials"] == 0:
         reasons.append("no candidate trials on record")
+    elif parity:
+        if before["trials"] and rate(after) < rate(before) - floor:
+            reasons.append(f"accuracy fell outside the noise floor: after {rate(after):.2f}, before {rate(before):.2f}, floor {floor:.2f}")
     elif after["passK"] != 1:
         reasons.append(f"after pass^k is {after['passK']} ({after['passes']} of {after['trials']} passed)")
     if regressions is None:
@@ -150,9 +196,37 @@ def build(root: Path, case_id: str, fix_branch: str | None, cases_output: str | 
     if comparison["comparison"] == "invalid-fingerprint":
         reasons.append("invalid-fingerprint: before and after ran on different environments (" + "; ".join(comparison["differences"]) + "); rerun the before side on the current environment")
     # The no-change control: a delta inside the spread of two current-pack runs is noise.
-    if control["present"] and control["tooSmallToSee"]:
+    if control["present"] and control["tooSmallToSee"] and not parity:
         reasons.append(f"too-small-to-see: after minus before is {control['delta']:+.2f}, inside the noise floor {control['noiseFloor']:.2f} "
                        f"(current pack twice: {control['beforeRate']:.2f} and {control['controlRate']:.2f})")
+    # Rigor checks (rigor.py). The gates come first: they say the proof cannot be read, not that it failed.
+    gate = rigor.noise_gate(before_summary, control_summary, min_detectable_delta)
+    gate_code, gate_reasons = None, []
+    if gate["tooNoisy"]:
+        gate_code = "noise-too-high"
+        gate_reasons.append(f"noise-too-high: the noise floor {gate['noiseFloor']:.2f} is above the minimum detectable delta {min_detectable_delta:.2f}: add repetitions or cases")
+    dependent = [j for j in judges if j.get("judgeModel") and j.get("workerModel") and (j["judgeModel"] == j["workerModel"] or j["judgeModel"] in j["workerModel"])]
+    if dependent or any(j["verdict"] == "judge-not-independent" for j in judges):
+        gate_code = gate_code or "judge-not-independent"
+        gate_reasons.append("judge-not-independent: the judge is the model that ran the trial; run judge.sh with another --model")
+    per_case = {case_id: {"current": before_summary, "candidate": after_summary, "control": control_summary}}
+    for hc in case.get("holdout") or []:
+        per_case[str(hc)] = {a: load(root / "runs/proofs" / str(hc) / a / "summary.json") for a in ("current", "candidate", "control")}
+    sanity = rigor.suite_sanity(per_case)
+    leaks = rigor.leak_scan(pack_diff if pack_diff is not None else git_pack_diff(root, fix_branch or case.get("fixBranch")),
+                            [case] + [load(root / "harness/cases" / f"{h}.json") or {"id": str(h)} for h in case.get("holdout") or []])
+    if leaks and block_on_leak:
+        gate_code = gate_code or "pack-embeds-failure"
+        gate_reasons.append("pack-embeds-failure: the pack or hook diff carries a recorded failure or a case id of the cases being proved (" + "; ".join(f"{l['kind']} {l['text'][:60]}" for l in leaks) + ")")
+    if parity and not gate_code and not reasons and not cost["lower"]:
+        gate_code = "cost-not-lower"
+        gate_reasons.append(f"cost-not-lower: mean cost per trial is ${cost['after']:.2f} after against ${cost['before']:.2f} before; it must be lower by more than the control arm's cost spread (${cost['spread']:.2f})")
+    elif parity and reasons and not cost["lower"]:
+        reasons.append(f"cost-not-lower: ${cost['after']} per trial after against ${cost['before']} before (spread ${cost['spread']})")
+    held_cases = holdout["cases"] if holdout.get("present") else []
+    train_delta = round(rate(after) - rate(before), 4) if before["trials"] and after["trials"] else None
+    rule = (rigor.rule_decision(train_delta, holdout.get("delta") if not holdout.get("unrun") else None, regressions, held_cases)
+            if holdout.get("present") else None)
     judge_cost = round(sum(float(j.get("costUsd") or 0) for j in judges), 4)
     control_cost = round(float((control.get("control") or {}).get("costUsd") or 0), 4)
     return {
@@ -161,10 +235,13 @@ def build(root: Path, case_id: str, fix_branch: str | None, cases_output: str | 
         "before": before, "after": after, "regressions": regressions, "casesOutput": cases_output or "",
         "fingerprint": comparison, "control": control, "holdout": holdout,
         "judge": judges, "fix": fix,
+        "minDetectableDelta": min_detectable_delta, "objective": objective,
+        "costPerTrial": cost, "suite": sanity["suite"], "impossibleOrAmbiguous": sanity["impossibleOrAmbiguous"],
+        "graderAgreement": rigor.grader_agreement(judges), "rule": rule, "leaks": leaks,
         "costUsd": {"before": before["costUsd"], "after": after["costUsd"], "control": control_cost, "judge": judge_cost,
                     "interrupted": round(before["interruptedCostUsd"] + after["interruptedCostUsd"], 4),
                     "total": round(before["costUsd"] + after["costUsd"] + control_cost + judge_cost + before["interruptedCostUsd"] + after["interruptedCostUsd"], 4)},
-        "verdict": "SHIP" if not reasons else "NO-SHIP", "reasons": reasons,
+        "verdict": gate_code or ("SHIP" if not reasons else "NO-SHIP"), "reasons": gate_reasons + reasons,
         "at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
@@ -227,6 +304,22 @@ def table(v: dict) -> str:
     else:
         w(f"holdout: {h.get('note', 'no holdout: suite too small')}")
     w("")
+    s = v.get("suite") or {}
+    if s:
+        w(f"suite: baseline pass rate {s.get('baselinePassRate')}, saturated {s.get('saturated')}"
+          + (f" (consider --objective {s['objectiveSuggestion']})" if s.get("objectiveSuggestion") else "")
+          + (f"; impossible or ambiguous: {', '.join(v['impossibleOrAmbiguous'])}" if v.get("impossibleOrAmbiguous") else ""))
+    w(f"objective: {v.get('objective', 'performance')}, minimum detectable delta {v.get('minDetectableDelta')}"
+      + (f"; mean cost per trial ${v['costPerTrial']['before']} before, ${v['costPerTrial']['after']} after" if (v.get("costPerTrial") or {}).get("before") is not None and v["costPerTrial"].get("after") is not None else ""))
+    r = v.get("rule")
+    if r:
+        w(f"rule: train delta {r['trainDelta']}, held-out delta {r['heldOutDelta']} -> {r['decision'] or r.get('note')}")
+    for lk in v.get("leaks") or []:
+        w(f"leak ({lk['check']}): {lk['kind']} for case {lk['case']}: {lk['text'][:80]}")
+    ga = v.get("graderAgreement")
+    if ga:
+        w(f"grader agreement: {ga['agreed']} of {ga['runs']} judge run(s) agreed, {ga['disagreeing']} disagreeing")
+    w("")
     w("judge (both trajectories, a different model):")
     for j in v["judge"] or []:
         w(f"  {j['taskId']}  {j['verdict']}  ({j.get('model')}, ${float(j.get('costUsd') or 0):.2f}, quote found: {j.get('quoteFound')})")
@@ -239,7 +332,7 @@ def table(v: dict) -> str:
     w("")
     c = v["costUsd"]
     w(f"spend: before ${c['before']:.2f}, after ${c['after']:.2f}, control ${c.get('control', 0):.2f}, judge ${c['judge']:.2f}, interrupted ${c.get('interrupted', 0):.2f}, total ${c['total']:.2f}")
-    w(f"verdict: {v['verdict']}" + (": " + "; ".join(v["reasons"]) if v["reasons"] else " (reproduced, after pass^k 1, no regression, every judge verdict earned)"))
+    w(f"verdict: {v['verdict']}" + (": " + "; ".join(v["reasons"]) if v["reasons"] else " (reproduced, after pass^k 1, no regression, every judge verdict earned)" if v["verdict"] == "SHIP" else ""))
     return "\n".join(out)
 
 
@@ -264,6 +357,8 @@ def write_case(root: Path, v: dict) -> Path:
         case["status"] = "proven"
         case["fixedIn"] = f"{v['fix']['branch']} ({v['fix']['sha']}), merged to main: {', '.join(v['fix']['files'])}"
         case["provenAt"] = v["at"]
+    elif v["verdict"] != "NO-SHIP":
+        pass  # a gate (noise-too-high, judge-not-independent, ...): nothing was measured well enough to change the case's status
     else:
         # The mistake was shown; the fix tried did not clear the case. The case stays as it is.
         case["status"] = "reproduced, not fixed" if v["before"]["trials"] and v["before"]["passes"] < v["before"]["trials"] else "not reproduced"
@@ -289,10 +384,13 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--cases-output", help="file holding harness/bin/cases.sh output")
     ap.add_argument("--write-case", action="store_true")
     ap.add_argument("--record", action="store_true")
+    ap.add_argument("--min-detectable-delta", type=float, default=rigor.DEFAULT_MIN_DETECTABLE_DELTA)
+    ap.add_argument("--objective", choices=("performance", "cost-at-parity"), default="performance")
+    ap.add_argument("--block-on-leak", action="store_true")
     a = ap.parse_args(argv)
     root = Path(a.root).resolve()
     cases_out = Path(a.cases_output).read_text(encoding="utf-8") if a.cases_output else None
-    v = build(root, a.case, a.fix_branch, cases_out)
+    v = build(root, a.case, a.fix_branch, cases_out, min_detectable_delta=a.min_detectable_delta, objective=a.objective, block_on_leak=a.block_on_leak)
     pdir = root / "runs/proofs" / a.case
     pdir.mkdir(parents=True, exist_ok=True)
     (pdir / "verdict.json").write_text(json.dumps(v, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")

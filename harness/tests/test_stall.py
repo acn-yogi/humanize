@@ -113,6 +113,91 @@ class StallTests(unittest.TestCase):
         self.assertEqual(set(stall.STALLS), {"artifact-gap", "grader-disagreement", "harness-or-infra", "structural", "variance"})
 
 
+class StallReviewTests(unittest.TestCase):
+    """After two consecutive flat rejected attempts: the remaining failures by stall category, no edit, genuine ones under continueWith."""
+
+    def flat_record(self, **kw):
+        return record(rounds=[rnd(0, checks_pass=False, verdict="reject"), rnd(1, checks_pass=False, verdict="reject"), rnd(2, checks_pass=False, verdict="reject")], **kw)
+
+    def test_two_consecutive_flat_rejected_attempts_write_a_review(self):
+        c = stall.classify(self.flat_record(), 2, 2)
+        rv = c["stallReview"]
+        self.assertEqual(rv["flatAttempts"], 2)
+        self.assertFalse(rv["edited"])
+        self.assertEqual([r["source"] for r in rv["remaining"]], ["check", "reviewer"])
+        self.assertEqual(rv["byCategory"], {"genuine": ["python -m pytest -q", "r"]})
+        self.assertEqual(rv["continueWith"], ["python -m pytest -q", "r"])
+
+    def test_one_flat_attempt_is_not_enough(self):
+        rec = record(rounds=[rnd(0, checks_pass=False, verdict="reject"), rnd(1, checks_pass=False, verdict="reject")])
+        self.assertIsNone(stall.classify(rec, 1, 2)["stallReview"])
+        self.assertIsNone(stall.classify(record(), 0, 2)["stallReview"])
+
+    def test_progress_between_attempts_is_not_flat(self):
+        # 2 failures, then 1, then 1: the second attempt improved, so there are never two flat ones in a row.
+        rec = record(rounds=[rnd(0, checks_pass=False, verdict="reject"), rnd(1, checks_pass=False, verdict="approve"), rnd(2, checks_pass=False, verdict="approve")])
+        self.assertIsNone(stall.classify(rec, 2, 2)["stallReview"])
+
+    def test_approved_or_passing_rounds_are_not_rejected_attempts(self):
+        rec = record(rounds=[rnd(0, True, "approve"), rnd(1, True, "approve"), rnd(2, True, "approve")])
+        self.assertIsNone(stall.classify(rec, 2, 2)["stallReview"])
+
+    def test_the_failures_are_sorted_by_the_existing_stall_categories(self):
+        failing = [{"cmd": "python {harness}/checks/x.py", "exit": 1}, {"cmd": "python -m pytest -q", "exit": 1}]
+        passed_once = {"round": 0, "allChecksPass": False, "changedPaths": ["a.py"], "verdict": {"verdict": "reject", "reasons": ["r1", "r2", "r3"]}, "path": "reject",
+                       "checks": [{"cmd": "python -m pytest -q", "exit": 0}, {"cmd": "python {harness}/checks/x.py", "exit": 1}]}
+        rec = record(rounds=[passed_once,
+                             {**passed_once, "round": 1, "checks": failing},
+                             {**passed_once, "round": 2, "checks": failing}])
+        rv = stall.classify(rec, 2, 2)["stallReview"]
+        cats = {r["failure"]: r["stall"] for r in rv["remaining"]}
+        self.assertEqual(cats["python -m pytest -q"], "variance")        # passed in one round, failed in another
+        self.assertEqual(cats["python {harness}/checks/x.py"], "genuine")
+        self.assertEqual(cats["r1"], "genuine")
+        self.assertEqual(rv["continueWith"], ["python {harness}/checks/x.py", "r1", "r2", "r3"])
+        self.assertNotIn("variance", [x for x in rv["continueWith"]])
+        self.assertEqual(list(rv["byCategory"]), ["variance", "genuine"])
+
+    def test_a_check_failing_while_the_reviewer_approves_is_grader_disagreement(self):
+        failing = [{"cmd": "python {harness}/checks/x.py", "exit": 1}]
+        rec = record(rounds=[rnd(i, checks_pass=False, verdict="approve", checks=failing) for i in range(3)])
+        rv = stall.classify(rec, 2, 2)["stallReview"]
+        self.assertEqual(rv["byCategory"], {"grader-disagreement": ["python {harness}/checks/x.py"]})
+        self.assertEqual(rv["continueWith"], [])
+
+    def test_a_harness_error_leaves_nothing_to_continue_with(self):
+        rec = self.flat_record(sessions=[session(is_error=True, subtype="error_during_execution", result="API Error: 502")])
+        c = stall.classify(rec, 2, 2)
+        rv = c["stallReview"]
+        self.assertEqual(set(rv["byCategory"]), {"harness-or-infra"})
+        self.assertEqual(rv["continueWith"], [])
+        self.assertEqual(c["stall"], "harness-or-infra")
+
+    def test_a_missing_module_named_by_the_author_is_an_artifact_gap_for_the_failing_check(self):
+        rec = self.flat_record(texts=("The check imports humanize.extras but No module named humanize.extras exists.",))
+        rv = stall.classify(rec, 2, 2)["stallReview"]
+        self.assertEqual({r["source"]: r["stall"] for r in rv["remaining"]}["check"], "artifact-gap")
+        self.assertEqual(rv["continueWith"], ["r"])
+
+    def test_the_review_does_not_change_the_halt_or_the_retry_cap(self):
+        before = stall.classify(record(rounds=[rnd(0, checks_pass=False)]), 2, 2)
+        after = stall.classify(self.flat_record(), 2, 2)
+        for k in ("failureClass", "stall", "atCap", "retries", "retryCap"):
+            self.assertEqual(after[k], before[k], k)
+        self.assertEqual(after["retryCap"], 2)
+
+    def test_a_planted_run_dir_carries_the_review(self):
+        with tempfile.TemporaryDirectory() as d:
+            r = Path(d)
+            (r / "plan.json").write_text(json.dumps(PLAN), encoding="utf-8")
+            (r / "facts.json").write_text(json.dumps({"checks": [], "changedPaths": ["src/humanize/time.py"]}), encoding="utf-8")
+            (r / "scope.json").write_text(json.dumps({"outside": [], "harness": []}), encoding="utf-8")
+            (r / "sessions.json").write_text(json.dumps([session()]), encoding="utf-8")
+            (r / "rounds.jsonl").write_text("".join(json.dumps(rnd(i, checks_pass=False, verdict="reject")) + "\n" for i in range(3)), encoding="utf-8")
+            c = stall.classify(stall.read_record(r), 2, 2)
+        self.assertEqual(c["stallReview"]["flatAttempts"], 2)
+
+
 class RunDirTests(unittest.TestCase):
     def test_a_planted_run_dir_is_read_end_to_end(self):
         with tempfile.TemporaryDirectory() as d:

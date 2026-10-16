@@ -47,6 +47,16 @@ class ScorecardTests(unittest.TestCase):
         self.assertAlmostEqual(c["totalUsd"], 1.5)
         self.assertAlmostEqual(c["usd"], 0.75)
 
+    def test_cost_per_merged_pr_prints_in_dollars(self):
+        s = scorecard.compute(LEDGER, PRS, [], PACK)
+        line = [l for l in scorecard.render(s).splitlines() if l.startswith("cost per merged PR")][0]
+        self.assertRegex(line, r"cost per merged PR\s+\$\d+\.\d\d \(\d+ merged, \$\d+\.\d\d in all;")
+
+    def test_the_offline_scorecard_still_renders_every_line(self):
+        text = scorecard.render(scorecard.compute(LEDGER, None, [], PACK))
+        self.assertIn("cost per merged PR        n/a (GitHub not read)", text)
+        self.assertEqual(len(text.splitlines()), 8)
+
     def test_no_merged_pr_gives_none(self):
         prs = [dict(p, mergedAt=None) for p in PRS]
         self.assertIsNone(scorecard.compute(LEDGER, prs, [], PACK)["costPerMergedPr"]["usd"])

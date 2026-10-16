@@ -7,7 +7,9 @@
 #   harness/bin/audit.sh [--roots DIR...] [--json] [--promote CODE]
 #
 #   --promote CODE   write harness/cases/drafts/<code>.json: the real prompt, the base sha, the
-#                    task ids, and an empty checks list for a person to fill
+#                    task ids, an empty checks list for a person to fill, and `whyHard`
+#                    ("TODO: why is this hard") plus `promotedAt`: the case is refused
+#                    (case-missing-why-hard) until a person writes whyHard
 #
 # Exit 1 when a FAIL-severity class has a hit, 0 on WARN or clean, 2 when a transcript has a
 # shape the normalizer does not know (it never reports a clean audit it did not run).

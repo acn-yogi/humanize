@@ -30,7 +30,9 @@ Checks (one code each; a hit carries taskId, spec, class, file, line, round, tur
 Output: failure classes ranked by recurrence (distinct tasks, then hits), the hits under each.
 Exit 1 when any FAIL-severity class has a hit, 0 on WARN or clean. --promote CODE writes a
 case draft harness/cases/drafts/<code>.json with the real prompt (the spec body), the base sha
-from the packet, the task ids and an empty checks list for a person to fill.
+from the packet, the task ids and an empty checks list for a person to fill, a required `whyHard`
+set to "TODO: why is this hard" and `promotedAt`: case-run.sh and cases.sh refuse the case
+(case-missing-why-hard) until a person writes the real answer.
 
 The normalizer is versioned (TRACE_VERSION) and fails loudly on a shape it does not know,
 rather than parsing nothing and reporting a clean audit. Standard library only.
@@ -39,6 +41,7 @@ rather than parsing nothing and reporting a clean audit. Standard library only.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import re
 import sys
@@ -576,6 +579,10 @@ def promote(report: dict, code: str, roots: list[Path], drafts: Path, cwd: Path)
         "prompt": prompt,
         "k": 3,
         "checks": [],
+        # Adversarial sampling: a promoted case must say why it is hard. The placeholder is refused
+        # by case-run.sh and cases.sh (case-missing-why-hard) until a person writes the real answer.
+        "whyHard": "TODO: why is this hard",
+        "promotedAt": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "hits": [{k: h[k] for k in ("taskId", "spec", "round", "file", "line", "text")} for h in cls["items"]],
     }
     drafts.mkdir(parents=True, exist_ok=True)

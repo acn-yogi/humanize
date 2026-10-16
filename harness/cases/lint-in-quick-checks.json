@@ -7,6 +7,7 @@
   "reasonCode": "lint",
   "spec": "0002-bugfix-precisedelta-sign",
   "specFile": "specs/0002-bugfix-precisedelta-sign.md",
+  "whyHard": "The Stop hook ran only the spec's quick checks, never the repository's own lint, so a session could finish with the trusted checks green while ruff E501 findings sat in its new test lines (PR #3, spec 0002). Lint is also only part of why the reviewer rejected round 0: the other rejections (an unclosed docstring fence, a datetime regression) are things lint cannot see, so a lint fix alone cannot clear this broad case. That is why it was proved NO-SHIP while its narrow half shipped.",
   "tasks": [
     "t-01M4RYVYEG6H31MRD8C2N01K04",
     "t-01M4RZHVFWTPBC0BG9QVPBAS3T",

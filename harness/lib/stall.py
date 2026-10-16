@@ -23,6 +23,15 @@ not spend the same again on the same spec:
                           paths it needs (scope denials or an out-of-scope diff on them)
     variance              the checks passed on one attempt and failed on another with no structural cause
 
+Stall review (Anthropic's "Automating Eval Design and Hillclimbing"): when a task has had two
+consecutive flat rejected attempts (rejected, with no fewer failures than the attempt before),
+stall_review() adds `stallReview` to the halt, and workbench.sh copies it onto the halted ledger
+row: {flatAttempts, edited: false, remaining: [{failure, source, stall}], byCategory, continueWith}.
+The remaining failures are sorted by the stall categories above plus `genuine` (a failure with no
+stall signal: the work ran and did not pass); nothing is edited; only the genuine ones are listed
+under continueWith, so the next pass spends on what another attempt could fix. Retry caps are
+untouched.
+
 Structural is read after every rejected round, not only at the cap: workbench.sh stops the retry
 loop on it and writes the halt with reason stall-structural. Everything here is read from
 sessions.json, rounds.jsonl, loops.jsonl, scope.json, facts.json, plan.json and the worker
@@ -214,6 +223,67 @@ def stall_category(rec: dict, fclass: str) -> tuple[str, str]:
     return "artifact-gap", "no stronger signal: the session ran to the cap without the checks and the reviewer agreeing; something the spec assumed was not there"
 
 
+def round_failures(r: dict) -> list[tuple[str, str]]:
+    """The failures of one rejected round: (source, text) for each failing check and each reviewer reason."""
+    out: list[tuple[str, str]] = []
+    for c in r.get("checks") or []:
+        if c.get("exit") not in (0, None):
+            out.append(("check", str(c.get("cmd"))))
+    verdict = r.get("verdict") or {}
+    if verdict.get("verdict") == "reject":
+        out.extend(("reviewer", str(x)) for x in verdict.get("reasons") or [])
+    if not r.get("allChecksPass", True) and not any(s == "check" for s, _ in out):
+        out.append(("check", "the trusted checks failed"))
+    return out
+
+
+def is_rejected(r: dict) -> bool:
+    return r.get("path") == "reject" or (r.get("verdict") or {}).get("verdict") == "reject" or not r.get("allChecksPass", True)
+
+
+def stall_review(rec: dict, fclass: str) -> dict | None:
+    """After two consecutive flat rejected attempts, the remaining failures sorted by stall category,
+    with no edit made, and only the genuine ones under continueWith. None while the attempts were not flat."""
+    rounds = rec.get("rounds") or []
+    flat = [False] * len(rounds)
+    for i in range(1, len(rounds)):
+        flat[i] = is_rejected(rounds[i]) and is_rejected(rounds[i - 1]) and len(round_failures(rounds[i])) >= len(round_failures(rounds[i - 1]))
+    if not any(flat[i] and flat[i - 1] for i in range(1, len(rounds))):
+        return None
+    last = rounds[-1]
+    cmds_passed_somewhere = {str(c.get("cmd")) for r in rounds for c in (r.get("checks") or []) if c.get("exit") in (0, None)}
+    reviewer_approves_last = (last.get("verdict") or {}).get("verdict") == "approve"
+    checks_always_pass = all(bool(r.get("allChecksPass")) for r in rounds)
+    structural_why = structural(rec)
+    texts = rec.get("authorTexts") or []
+    remaining = []
+    for source, text in round_failures(last):
+        if fclass in ("harness-error", "timeout"):
+            cat = "harness-or-infra"
+        elif structural_why and (source == "reviewer" or text in (rec.get("checkPaths") or [])):
+            cat = "structural"
+        elif CONTRADICTION_RE.search(text):
+            cat = "structural"
+        elif source == "check" and text in cmds_passed_somewhere:
+            cat = "variance"
+        elif source == "check" and reviewer_approves_last:
+            cat = "grader-disagreement"
+        elif source == "reviewer" and checks_always_pass and sum(1 for r in rounds if (r.get("verdict") or {}).get("verdict") == "reject") >= 2:
+            cat = "grader-disagreement"
+        elif ARTIFACT_RE.search(text) or (source == "check" and any(ARTIFACT_RE.search(t) for t in texts[-1:])):
+            cat = "artifact-gap"
+        else:
+            cat = "genuine"
+        remaining.append({"failure": text[:300], "source": source, "stall": cat})
+    by_cat: dict[str, list[str]] = {}
+    for c in STALLS + ("genuine",):
+        items = [r["failure"] for r in remaining if r["stall"] == c]
+        if items:
+            by_cat[c] = items
+    return {"flatAttempts": sum(1 for f in flat if f), "edited": False, "remaining": remaining, "byCategory": by_cat,
+            "continueWith": by_cat.get("genuine", [])}
+
+
 def classify(rec: dict, retries: int, retry_cap: int) -> dict:
     fclass, evidence = failure_class(rec)
     at_cap = retries >= retry_cap
@@ -228,7 +298,7 @@ def classify(rec: dict, retries: int, retry_cap: int) -> dict:
         elif at_cap:
             stall, stall_evidence = stall_category(rec, fclass)
     return {"failureClass": fclass, "evidence": evidence, "stall": stall, "stallEvidence": stall_evidence, "atCap": at_cap,
-            "retries": retries, "retryCap": retry_cap}
+            "retries": retries, "retryCap": retry_cap, "stallReview": stall_review(rec, fclass)}
 
 
 def main(argv: list[str]) -> int:

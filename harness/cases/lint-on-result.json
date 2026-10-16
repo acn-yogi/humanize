@@ -7,6 +7,7 @@
   "reasonCode": "lint",
   "spec": "0002-bugfix-precisedelta-sign",
   "specFile": "specs/0002-bugfix-precisedelta-sign.md",
+  "whyHard": "The trusted acceptance checks passed in the fresh clone on a result that still carried ruff E501 findings, because no check in the session's own loop ran lint; only ruff run on the result's changed files, from outside the session, can tell. It is hard to prove honestly because a model can pass a lint gate by weakening it (noqa, config edits), so the judge must read the transcript for a verbatim quote of the agent running and fixing, and three earlier trials died on a proxy and had to be scored error, not fail.",
   "tasks": [
     "t-01M4RZHVGFWY1FXM7RNXWAVNQA"
   ],

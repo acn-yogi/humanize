@@ -177,6 +177,17 @@ class PromoteTests(unittest.TestCase):
         self.assertEqual(set(draft["tasks"]), {"t-FIXTUREREJECT", "t-FIXTURELINT"})
         self.assertIn(draft["spec"], ("0004-cli-entrypoint", "0002-bugfix-precisedelta-sign"))
 
+    def test_promote_requires_a_written_why_hard(self):
+        report = audit.audit([FIXTURES], ROOT)
+        with tempfile.TemporaryDirectory() as d:
+            draft = json.loads(audit.promote(report, "REVIEW_REJECTED", [FIXTURES], Path(d), ROOT).read_text(encoding="utf-8"))
+        self.assertEqual(draft["whyHard"], "TODO: why is this hard")
+        self.assertRegex(draft["promotedAt"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
+        import rigor
+        self.assertEqual(rigor.why_hard_status(draft), "missing")   # case-run.sh and cases.sh refuse it until a person writes it
+        draft["whyHard"] = "The reviewer rejects round 0 for things no check can see."
+        self.assertEqual(rigor.why_hard_status(draft), "ok")
+
     def test_promote_refuses_a_class_with_no_hit(self):
         report = audit.audit([FIXTURES / "clean"], ROOT)
         with tempfile.TemporaryDirectory() as d, self.assertRaises(SystemExit):

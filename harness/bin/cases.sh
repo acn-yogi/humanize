@@ -13,9 +13,20 @@
 #               proof exists yet or the proof did not ship (the fix is not on main: nothing to guard).
 #
 #   harness/bin/cases.sh            -> one PASS, FAIL or NOTE line per case; exit 1 on any FAIL
+#
+# Rigor lines (harness/lib/rigor.py, DEMO.md "Rigor from the eval design article"), printed first:
+#   REFUSE <case> case-missing-why-hard   a promoted case (promotedAt) whose whyHard is missing or
+#                                         still "TODO: why is this hard"; exit 1
+#   WARN   <case> legacy-no-why-hard      no whyHard and no promotedAt: warns only
+#   WARN   <case> case-start-carries-answer  the case's base is not the pre-fix commit (the fix is
+#                                         an ancestor of it) or expectedFile at the base already
+#                                         contains fixText; warns only
+# WARN and REFUSE lines never start with PASS or FAIL, so proof.py's regression count ignores them.
 set -uo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 bad=0
+PY="$(command -v python3 >/dev/null 2>&1 && python3 -c 'import sys' >/dev/null 2>&1 && echo python3 || echo python)"
+"$PY" "${REPO}/harness/lib/rigor.py" lint-cases "$REPO" || bad=1
 for c in "${REPO}"/harness/cases/*.json; do
   id="$(jq -r .id "$c")"
   kind="$(jq -r '.kind // "flags"' "$c")"

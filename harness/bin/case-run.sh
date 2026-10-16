@@ -3,7 +3,7 @@
 # step (--pack current) and the prove step (--pack candidate) of the proving loop.
 #
 #   harness/bin/case-run.sh harness/cases/<case>.json --pack current|candidate|control [--k 3] [--base BRANCH]
-#                           [--out DIR] [--max-usd 3.5] [--holdout]
+#                           [--out DIR] [--max-usd 3.5] [--holdout] [--min-detectable-delta 0.1]
 #
 # Each trial is a fresh workbench (workbench.sh --no-publish --trial N --retries 0): the spec
 # the case names, run from the base branch's harness (current: [github] base; candidate: the
@@ -16,11 +16,19 @@
 # pre-commit pinned version) passes on the result's changed Python files. Nothing is read from
 # Claude's account of its work. Writes <out>/trials.jsonl, trials.txt and summary.json under
 # runs/proofs/<case id>/<pack>/; stops before a trial that would take the spend past --max-usd.
+#
+# Two pre-flights run before anything is spent (harness/lib/rigor.py, DEMO.md "Rigor from the eval
+# design article"), each written to runs/proofs/<case id>/verdict.json and exiting 3:
+#   case-missing-why-hard  a promoted case (promotedAt) whose whyHard is missing or still the placeholder
+#   noise-too-high         --pack candidate, a control arm on record, and its noise floor (the spread
+#                          of the two current-pack runs) above --min-detectable-delta (default 0.1):
+#                          add repetitions or cases. No control arm: nothing changes.
+# A case with neither whyHard nor promotedAt runs and only warns legacy-no-why-hard.
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck source=../lib/common.sh
 . "${REPO}/harness/lib/common.sh"
-case_file="" pack="" k="" base="" out="" max_usd="3.5" rescore=0 holdout=0
+case_file="" pack="" k="" base="" out="" max_usd="3.5" rescore=0 holdout=0 mdd="0.1"
 while [ $# -gt 0 ]; do
   case "$1" in
     --pack) pack="${2:?}"; shift 2 ;;
@@ -30,6 +38,7 @@ while [ $# -gt 0 ]; do
     --max-usd) max_usd="${2:?}"; shift 2 ;;
     --rescore) rescore=1; shift ;;   # score the trials already on record again from their packets; run nothing
     --holdout) holdout=1; shift ;;   # also run the case's held-out cases on this pack
+    --min-detectable-delta) mdd="${2:?}"; shift 2 ;;   # the noise gate: a control floor above this refuses the candidate run
     -*) die "unknown option: $1" ;;
     *) case_file="$1"; shift ;;
   esac
@@ -39,8 +48,16 @@ done
 cj() { jq -r "$1" "$case_file"; }
 [ "$(cj .kind)" = trajectory ] || die "$(cj .id) is a $(cj .kind) case; case-run.sh runs trajectory cases (cases.sh runs the flags cases)"
 spec="$(cj .spec)"; cid="$(cj .id)"
+# Adversarial sampling: a promoted case must say why it is hard (verdict case-missing-why-hard).
+python3 "${REPO}/harness/lib/rigor.py" why-hard "$case_file" || { log "case-missing-why-hard: ${cid} was promoted from the audit and has no written whyHard; nothing run"; exit 3; }
 [ -n "$k" ] || k="$(cj '.k // 3')"
 [[ "$k" =~ ^([1-9]|10)$ ]] || die "--k must be 1 to 10"
+[[ "$mdd" =~ ^[0-9]+(\.[0-9]+)?$ ]] || die "--min-detectable-delta must be a number such as 0.1"
+# The pre-flight noise gate: before the candidate arm spends anything, the control arm (the current
+# pack run twice) must show a noise floor small enough to see a real change.
+if [ "$pack" = candidate ] && [ "$rescore" = 0 ]; then
+  gate="$(python3 "${REPO}/harness/lib/rigor.py" noise-gate "$REPO" "$cid" --min-detectable-delta "$mdd")" || { log "noise-too-high: $(jq -r '.reasons[0]' <<< "$gate"); nothing run"; exit 3; }
+fi
 if [ "$holdout" = 1 ]; then
   # The held-out cases: the same pack and k, each under its own runs/proofs/<id>/<pack>/.
   # The improver never reads them; proof.py reports their delta apart from the training case's.
@@ -49,7 +66,7 @@ if [ "$holdout" = 1 ]; then
   for h in $held; do
     hf="${REPO}/harness/cases/${h}.json"; [ -f "$hf" ] || die "held-out case ${h} not found (harness/cases/${h}.json)"
     log "holdout: case ${h} on pack ${pack}, k ${k}"
-    "${REPO}/harness/bin/case-run.sh" "$hf" --pack "$pack" --k "$k" --max-usd "$max_usd" ${base:+--base "$base"} $( [ "$rescore" = 1 ] && echo --rescore )
+    "${REPO}/harness/bin/case-run.sh" "$hf" --pack "$pack" --k "$k" --max-usd "$max_usd" --min-detectable-delta "$mdd" ${base:+--base "$base"} $( [ "$rescore" = 1 ] && echo --rescore )
   done
 fi
 if [ -z "$base" ]; then
@@ -212,9 +229,9 @@ interrupted="$(for d in "${out}"/t-*/; do
     [ -d "$d" ] && [ ! -f "${d}packet.json" ] && ! grep -q "\"taskId\":\"$(basename "$d")\"" "$trials" || continue
     jq -nc --arg t "$(basename "$d")" --argjson c "$(jq -s 'map(select(.type == "result") | .total_cost_usd // 0) | add // 0' "${d}transcript.jsonl" 2>/dev/null || echo 0)" '{taskId: $t, costUsd: $c}'
   done | jq -sc '.')"
-jq -s --arg cid "$cid" --arg pack "$pack" --arg base "$base" --arg spec "$spec" --argjson k "$k" --arg sha "$(g -C "$REPO" rev-parse "$base")" --argjson intr "$interrupted" '
+jq -s --arg cid "$cid" --arg pack "$pack" --arg base "$base" --arg spec "$spec" --argjson k "$k" --argjson mdd "$mdd" --arg sha "$(g -C "$REPO" rev-parse "$base")" --argjson intr "$interrupted" '
   (map(select(.outcome == "pass")) | length) as $p | (map(select(.outcome == "error")) | length) as $e | (length - $e) as $c |
-  {case: $cid, pack: $pack, base: $base, baseSha: $sha, spec: $spec, k: $k, trials: $c, errors: $e, passes: $p,
+  {case: $cid, pack: $pack, minDetectableDelta: $mdd, base: $base, baseSha: $sha, spec: $spec, k: $k, trials: $c, errors: $e, passes: $p,
    passK: (if $c > 0 and $p == $c then 1 else 0 end), costUsd: (map(.costUsd // 0) | add // 0),
    interrupted: $intr, interruptedCostUsd: ($intr | map(.costUsd) | add // 0),
    packIds: (map(.packId // empty) | unique), fingerprints: (map(.fingerprint // empty) | unique),

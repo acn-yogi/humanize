@@ -439,12 +439,15 @@ if [ "$publish" = 1 ] && [ "$path" != reject ]; then
   pr="$("${REPO}/harness/bin/publish.sh" "$rdir" "$branch")" || log "publish failed: the branch and packet are kept locally"
 fi
 # The ledger row. A halted row (path reject) carries failureClass and, at the cap or on a
-# structural stall, stall; a structural stall also names itself first among the reasons.
+# structural stall, stall; a structural stall also names itself first among the reasons. After two
+# consecutive flat rejected attempts it also carries stallReview (stall.py: the remaining failures
+# by stall category, no edit made, only the genuine ones under continueWith); caps are unchanged.
 event "${out}/ledger.jsonl" --arg taskId "$task_id" --arg spec "$(pj .id)" --arg class "$(pj .class)" --arg path "$path" \
   --argjson reasons "$(jq -c --argjson h "$halt" '(if ($h.reason // "") == "stall-structural" then ["stall-structural: " + ($h.stallEvidence // "")] else [] end) + .reasons' "${rdir}/decision.json")" \
   --argjson costUsd "$(jq .costUsd "${rdir}/packet.json")" \
   --argjson retries "$(jq .loops.retries "${rdir}/packet.json")" --arg pr "$pr" --arg packId "$pack_id" --arg trial "$trial" --arg trigger "$(pj '.trigger // ""')" \
   --argjson failureClass "$(jq -c '.failureClass // null' <<< "$halt")" --argjson stall "$(jq -c '.stall // null' <<< "$halt")" \
-  --argjson haltReason "$(jq -c '.reason // null' <<< "$halt")"
+  --argjson haltReason "$(jq -c '.reason // null' <<< "$halt")" \
+  --argjson stallReview "$(jq -c '.stallReview // null' <<< "$halt")"
 log "done: ${path}$( [ -n "$pr" ] && echo ", ${pr}" ), \$$(jq -r '.costUsd * 100 | round / 100' "${rdir}/packet.json") in total; packet ${rdir}/packet.json"
 echo "task-id: ${task_id}"
