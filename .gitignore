@@ -47,3 +47,4 @@ demo/live/*
 !demo/live/validate.py
 !demo/live/README.md
 !demo/live-runs/**/*.log
+runs/lessons.jsonl
