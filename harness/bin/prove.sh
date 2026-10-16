@@ -10,6 +10,7 @@
 # harness/proofs/<class>.json for a person to commit (the proofs are evaluator records: the
 # loop proposes them, people merge them). Trials never publish.
 set -euo pipefail
+export HARNESS_AGENT_SESSION=1  # lessons.sh approve and reject refuse under an agent session
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck source=../lib/common.sh
 . "${REPO}/harness/lib/common.sh"

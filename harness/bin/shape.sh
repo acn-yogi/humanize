@@ -27,6 +27,7 @@
 # Linux or WSL2 only. Exit 0 when the run completed, whatever the intake said; 2 when it could
 # not start. The last line on stdout is "shape-id: <id>".
 set -euo pipefail
+export HARNESS_AGENT_SESSION=1  # lessons.sh approve and reject refuse under an agent session
 umask 077
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"

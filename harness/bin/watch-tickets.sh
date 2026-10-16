@@ -14,6 +14,7 @@
 # poll refuses while enabled = false or while the halt flag (runs/HALT) exists. The last line of
 # a live poll is "started N" (tasks written to the queue). Exit 0 unless GitHub is unreachable.
 set -euo pipefail
+export HARNESS_AGENT_SESSION=1  # lessons.sh approve and reject refuse under an agent session
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck source=../lib/common.sh
 . "${REPO}/harness/lib/common.sh"

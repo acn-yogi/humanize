@@ -19,6 +19,7 @@
 # Linux or WSL2 only: the native sandbox needs bubblewrap. Exit 0 when the task ran, whatever
 # its outcome; 2 when it could not start. The last line on stdout is "task-id: <id>".
 set -euo pipefail
+export HARNESS_AGENT_SESSION=1  # lessons.sh approve and reject refuse under an agent session
 umask 077
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"

@@ -25,6 +25,7 @@
 #                          add repetitions or cases. No control arm: nothing changes.
 # A case with neither whyHard nor promotedAt runs and only warns legacy-no-why-hard.
 set -euo pipefail
+export HARNESS_AGENT_SESSION=1  # lessons.sh approve and reject refuse under an agent session
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck source=../lib/common.sh
 . "${REPO}/harness/lib/common.sh"

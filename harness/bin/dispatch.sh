@@ -26,6 +26,7 @@
 # Every wake-up ends with a line in runs/ledger.jsonl for each task it started, whatever the
 # outcome. A spec that already ran (a PR, a batch, a merge) is not run again.
 set -euo pipefail
+export HARNESS_AGENT_SESSION=1  # lessons.sh approve and reject refuse under an agent session
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck source=../lib/common.sh
 . "${REPO}/harness/lib/common.sh"

@@ -15,6 +15,7 @@
 # graderAgreement {runs, agreed, disagreeing}. The prompt asks for a rubric of checkable claims,
 # each with a verbatim quote, not a numeric scale.
 set -euo pipefail
+export HARNESS_AGENT_SESSION=1  # lessons.sh approve and reject refuse under an agent session
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck source=../lib/auth.sh
 . "${REPO}/harness/lib/auth.sh"

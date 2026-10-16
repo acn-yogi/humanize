@@ -15,6 +15,9 @@ One line per signal (and --json for the same as one object):
                               timeout, genuine; one line, counts apart, never one failure rate
     stalls by category        halted rows at the retry cap or stopped early, by stall:
                               artifact-gap, grader-disagreement, harness-or-infra, structural, variance
+    lessons                   opened, closed, recurred, median days to close (runs/lessons.jsonl)
+    lessons by source         share from human corrections, eval fails, tests (and build retro, external)
+    closed lessons that came back  the headline: a closed lesson whose signature appeared again
     pack size                 bytes and files under harness/pack, harness/hooks and the settings template
 
 The PR list comes from gh pr list on the fork (never upstream); --offline reads none and says
@@ -33,6 +36,9 @@ import sys
 import tomllib
 from collections import Counter
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import lessons as lessons_mod  # noqa: E402
 
 PACK_PATHS = ("harness/pack", "harness/hooks", ".claude/workbench/settings.template.json")
 TASK_RE = re.compile(r"\bt-[0-9A-HJKMNP-TV-Z]{26}\b")
@@ -71,7 +77,7 @@ def task_of_pr(pr: dict) -> str:
     return ""
 
 
-def compute(ledger: list[dict], prs: list[dict] | None, cases: list[dict], pack: dict) -> dict:
+def compute(ledger: list[dict], prs: list[dict] | None, cases: list[dict], pack: dict, lessons: list[dict] | None = None) -> dict:
     """The scorecard from plain lists. prs is None when GitHub was not read."""
     tasks = {r["taskId"]: r for r in ledger if r.get("taskId") and r.get("event") is None and "costUsd" in r}
     corrected = [r for r in ledger if r.get("event") == "corrected"]
@@ -120,6 +126,7 @@ def compute(ledger: list[dict], prs: list[dict] | None, cases: list[dict], pack:
         "haltsByFailureClass": {"halts": len(halted), "classes": dict(sorted(by_class.items()))},
         "stallsByCategory": {"stalls": sum(stalls.values()), "categories": dict(sorted(stalls.items())), "stoppedEarly": structural_early},
         "packSize": pack,
+        "lessons": lessons_mod.metrics(lessons or []),
         "tasks": len(tasks),
         "corrected": len(corrected),
     }
@@ -159,6 +166,9 @@ def render(s: dict) -> str:
     else:
         w(f"stalls by category        {st['stalls']} stall(s): " + ", ".join(f"{k} {v}" for k, v in st["categories"].items())
           + (f"; {st['stoppedEarly']} stopped before the cap (stall-structural)" if st["stoppedEarly"] else ""))
+    if s["lessons"]["opened"]:  # no lessons yet: the block stays out of the way (--json always carries it)
+        for line in lessons_mod.render_metrics(s["lessons"]):
+            w(line)
     p = s["packSize"]
     w(f"pack size                 {p['bytes']} bytes, {p['files']} files ({', '.join(p['paths'])})")
     return "\n".join(out)
@@ -192,7 +202,8 @@ def main(argv: list[str]) -> int:
             prs = json.loads(r.stdout.replace("\r", "") or "[]")
         else:
             print(f"scorecard: gh failed ({r.stderr.strip()[:200]}); GitHub signals not read", file=sys.stderr)
-    s = compute(ledger, prs, cases, pack_size(root))
+    lessons = lessons_mod.read_rows(root / "runs/lessons.jsonl")
+    s = compute(ledger, prs, cases, pack_size(root), lessons)
     print(json.dumps(s, indent=1) if a.json else render(s))
     return 0
 

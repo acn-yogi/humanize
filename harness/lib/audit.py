@@ -513,6 +513,11 @@ def render(report: dict) -> str:
             w(f"      {h['taskId']}  {h['spec']} ({h['class']}){rnd}{turn}  {where}")
             w(f"        {h['text']}")
         w("")
+    if report.get("lessons"):
+        w("open lessons (recurred first, then weight x recurrences; runs/lessons.jsonl)")
+        for l in report["lessons"]:
+            w(f"      {l['id']}  {l['status']:<11} {l['weight'] * l['recurrences']:>3}  {l['proposedDisposition']:<6} {l['class']}: {l['finding']}")
+        w("")
     w(f"result: {report['result']} ({report['failHits']} FAIL hit(s), {report['warnHits']} WARN hit(s))")
     return "\n".join(out)
 
@@ -609,6 +614,10 @@ def main(argv: list[str]) -> int:
     if a.promote:
         out = promote(report, a.promote, roots, Path(a.drafts) if Path(a.drafts).is_absolute() else cwd / a.drafts, cwd)
         report["promoted"] = rel(out, cwd)
+    lessons_file = cwd / "runs/lessons.jsonl"
+    if lessons_file.exists():  # the mine step ranks open lessons beside the failure classes
+        import lessons
+        report["lessons"] = lessons.open_ranked(lessons.read_rows(lessons_file))
     print(json.dumps(report, indent=1, ensure_ascii=False) if a.json else render(report))
     if a.promote and not a.json:
         print(f"promoted: {report['promoted']} (fill in checks; a person approves the case)")
